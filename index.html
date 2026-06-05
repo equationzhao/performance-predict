@@ -1,0 +1,385 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Segment Performance Predictor</title>
+    <link rel="stylesheet" href="./src/styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="page-header">
+        <div>
+          <p class="eyebrow">Cycling Performance Lab</p>
+          <h1>Segment Performance Predictor</h1>
+          <p class="subhead">
+            Estimate segment time from power, weight, CdA and Crr.
+          </p>
+        </div>
+        <div class="model-note">
+          Uses a simplified cycling physics model with average grade.
+        </div>
+      </header>
+
+      <section class="mobile-summary" id="mobile-summary" aria-live="polite">
+        <span class="mobile-summary-title">Ready to predict</span>
+        <span class="mobile-summary-metrics">Enter distance, grade, weight and power.</span>
+      </section>
+
+      <main class="predictor-layout">
+        <form class="input-panel" id="predictor-form" novalidate>
+          <section class="section-panel">
+            <div class="section-heading">
+              <div>
+                <h2>Segment</h2>
+                <p>Use average grade from a route planner.</p>
+              </div>
+            </div>
+
+            <div class="field-grid four">
+              <label class="field" for="distanceKm">
+                <span class="field-label">Distance</span>
+                <span class="input-with-unit">
+                  <input id="distanceKm" name="distanceKm" type="text" inputmode="decimal" autocomplete="off" placeholder="3.20" data-field="distanceKm" />
+                  <span class="unit">km</span>
+                </span>
+                <span class="field-message" data-error-for="distanceKm"></span>
+              </label>
+
+              <label class="field" for="gradePercent">
+                <span class="field-label">Average Grade</span>
+                <span class="input-with-unit">
+                  <input id="gradePercent" name="gradePercent" type="text" inputmode="decimal" autocomplete="off" placeholder="7.5" data-field="gradePercent" />
+                  <span class="unit">%</span>
+                </span>
+                <span class="field-message" data-error-for="gradePercent"></span>
+              </label>
+
+              <label class="field" for="elevationM">
+                <span class="field-label">Average Elevation</span>
+                <span class="input-with-unit">
+                  <input id="elevationM" name="elevationM" type="text" inputmode="decimal" autocomplete="off" data-field="elevationM" />
+                  <span class="unit">m</span>
+                </span>
+                <span class="field-message" data-error-for="elevationM"></span>
+              </label>
+
+              <label class="field" for="windMps">
+                <span class="field-label">Wind</span>
+                <span class="input-with-unit">
+                  <input id="windMps" name="windMps" type="text" inputmode="decimal" autocomplete="off" data-field="windMps" />
+                  <span class="unit">m/s</span>
+                </span>
+                <span class="field-message" data-error-for="windMps"></span>
+              </label>
+            </div>
+
+            <div class="derived-row">
+              <span>Estimated elevation gain</span>
+              <strong id="elevation-gain">--</strong>
+            </div>
+            <p class="field-hint">Positive wind means headwind; negative means tailwind.</p>
+          </section>
+
+          <section class="section-panel">
+            <div class="section-heading">
+              <div>
+                <h2>Rider &amp; Power</h2>
+                <p>W/kg uses body weight only. Physics uses body plus gear.</p>
+              </div>
+            </div>
+
+            <div class="field-grid three">
+              <label class="field" for="bodyWeightKg">
+                <span class="field-label">Body Weight</span>
+                <span class="input-with-unit">
+                  <input id="bodyWeightKg" name="bodyWeightKg" type="text" inputmode="decimal" autocomplete="off" placeholder="69.0" data-field="bodyWeightKg" />
+                  <span class="unit">kg</span>
+                </span>
+                <span class="field-message" data-error-for="bodyWeightKg"></span>
+              </label>
+
+              <label class="field" for="gearWeightKg">
+                <span class="field-label">Gear Weight</span>
+                <span class="input-with-unit">
+                  <input id="gearWeightKg" name="gearWeightKg" type="text" inputmode="decimal" autocomplete="off" data-field="gearWeightKg" />
+                  <span class="unit">kg</span>
+                </span>
+                <span class="field-message" data-error-for="gearWeightKg"></span>
+              </label>
+
+              <label class="field" for="powerW">
+                <span class="field-label">Target Power</span>
+                <span class="input-with-unit">
+                  <input id="powerW" name="powerW" type="text" inputmode="decimal" autocomplete="off" placeholder="320" data-field="powerW" />
+                  <span class="unit">W</span>
+                </span>
+                <span class="field-message" data-error-for="powerW"></span>
+              </label>
+            </div>
+
+            <div class="readonly-grid">
+              <div class="readonly-metric">
+                <span>Total Weight</span>
+                <strong id="total-weight">--</strong>
+              </div>
+              <div class="readonly-metric">
+                <span>Power-to-weight</span>
+                <strong id="power-to-weight">--</strong>
+              </div>
+            </div>
+          </section>
+
+          <section class="section-panel">
+            <div class="section-heading">
+              <div>
+                <h2>Aerodynamics</h2>
+                <p>Lower CdA means less aero drag. It matters more at higher speed.</p>
+              </div>
+              <span class="status-pill" id="cda-status">Road preset</span>
+            </div>
+
+            <div class="preset-grid" id="cda-presets" role="group" aria-label="CdA position presets"></div>
+
+            <div class="slider-row">
+              <label class="field compact" for="cdaRange">
+                <span class="field-label">CdA</span>
+                <input id="cdaRange" type="range" min="0.15" max="0.7" step="0.001" />
+              </label>
+              <label class="field cda-number" for="cda">
+                <span class="field-label">Value</span>
+                <span class="input-with-unit">
+                  <input id="cda" name="cda" type="text" inputmode="decimal" autocomplete="off" data-field="cda" />
+                  <span class="unit">m²</span>
+                </span>
+                <span class="field-message" data-error-for="cda"></span>
+              </label>
+            </div>
+          </section>
+
+          <section class="section-panel">
+            <div class="section-heading">
+              <div>
+                <h2>Rolling Resistance</h2>
+                <p>Choose a bike and surface preset, then fine tune Crr if needed.</p>
+              </div>
+              <span class="status-pill" id="crr-status">Road Bike on Asphalt</span>
+            </div>
+
+            <div class="segmented-row">
+              <div>
+                <span class="control-label">Bike Type</span>
+                <div class="segmented-control" id="bike-type" role="group" aria-label="Bike type"></div>
+              </div>
+              <div>
+                <span class="control-label">Surface</span>
+                <div class="segmented-control wrap" id="terrain" role="group" aria-label="Surface"></div>
+              </div>
+              <label class="field crr-field" for="crr">
+                <span class="field-label">Crr</span>
+                <span class="input-with-unit">
+                  <input id="crr" name="crr" type="text" inputmode="decimal" autocomplete="off" data-field="crr" />
+                </span>
+                <span class="field-message" data-error-for="crr"></span>
+              </label>
+            </div>
+          </section>
+
+          <details class="section-panel collapsible" id="advanced-panel">
+            <summary>
+              <span>
+                <strong>Advanced</strong>
+                <small>Drivetrain loss and drafting options.</small>
+              </span>
+              <span class="chevron">⌄</span>
+            </summary>
+            <label class="field advanced-loss" for="drivetrainLossPercent">
+              <span class="field-label">Drivetrain Loss</span>
+              <span class="input-with-unit">
+                <input id="drivetrainLossPercent" name="drivetrainLossPercent" type="text" inputmode="decimal" autocomplete="off" data-field="drivetrainLossPercent" />
+                <span class="unit">%</span>
+              </span>
+              <span class="field-message" data-error-for="drivetrainLossPercent"></span>
+            </label>
+
+            <div class="advanced-drafting-block">
+              <div class="section-heading">
+                <div>
+                  <h2>Drafting</h2>
+                  <p>Optional group riding model.</p>
+                </div>
+                <label class="toggle-line">
+                  <input id="draftingEnabled" type="checkbox" data-field="draftingEnabled" />
+                  <span>Enable</span>
+                </label>
+              </div>
+
+              <div class="drafting-options hidden" id="drafting-options">
+                <div class="drafting-grid">
+                  <label class="field range-field" for="draftRiders">
+                    <span class="field-label">Riders</span>
+                    <input id="draftRiders" type="range" min="2" max="8" step="1" data-field="draftRiders" />
+                    <strong id="draft-riders-value">2</strong>
+                    <span class="field-message" data-error-for="draftRiders"></span>
+                  </label>
+
+                  <label class="toggle-line drafting-mode">
+                    <input id="draftRotating" type="checkbox" data-field="draftRotating" />
+                    <span>Rotating paceline</span>
+                  </label>
+                </div>
+
+                <div class="drafting-grid" id="draft-static-options">
+                  <label class="field range-field" for="draftPosition">
+                    <span class="field-label">Your Position</span>
+                    <input id="draftPosition" type="range" min="1" max="2" step="1" data-field="draftPosition" />
+                    <strong id="draft-position-value">2</strong>
+                    <span class="field-message" data-error-for="draftPosition"></span>
+                  </label>
+                  <p class="field-hint">Position 1 is the front rider; higher positions receive more draft.</p>
+                </div>
+
+                <div class="drafting-grid hidden" id="draft-rotating-options">
+                  <label class="field range-field" for="draftWorkPercent">
+                    <span class="field-label">Time at Front</span>
+                    <input id="draftWorkPercent" type="range" min="0" max="100" step="1" data-field="draftWorkPercent" />
+                    <strong id="draft-work-value">50%</strong>
+                    <span class="field-message" data-error-for="draftWorkPercent"></span>
+                  </label>
+                  <p class="field-hint">Remaining time is split evenly across the drafting positions.</p>
+                </div>
+
+                <div class="drafting-grid group-weight-grid">
+                  <label class="toggle-line">
+                    <input id="draftUseSameWeight" type="checkbox" data-field="draftUseSameWeight" />
+                    <span>Use your body weight for the group</span>
+                  </label>
+
+                  <label class="field" for="draftGroupBodyWeightKg" id="draft-group-weight-field">
+                    <span class="field-label">Group Body Weight</span>
+                    <span class="input-with-unit">
+                      <input id="draftGroupBodyWeightKg" name="draftGroupBodyWeightKg" type="text" inputmode="decimal" autocomplete="off" data-field="draftGroupBodyWeightKg" />
+                      <span class="unit">kg</span>
+                    </span>
+                    <span class="field-message" data-error-for="draftGroupBodyWeightKg"></span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </details>
+        </form>
+
+        <aside class="result-panel" id="result-panel" aria-live="polite">
+          <section class="result-state" id="result-empty">
+            <p class="eyebrow">Ready to predict</p>
+            <h2>Enter the core inputs.</h2>
+            <p>Distance, average grade, body weight and target power are required. CdA and Crr presets are already selected.</p>
+            <div class="missing-list" id="missing-list"></div>
+          </section>
+
+          <section class="result-state hidden" id="result-invalid">
+            <p class="eyebrow warning-text">Cannot calculate prediction</p>
+            <h2>Fix the highlighted fields.</h2>
+            <p>Invalid values are blocked before running the velocity search.</p>
+          </section>
+
+          <section class="result-state hidden" id="result-no-solution">
+            <p class="eyebrow warning-text">No valid forward speed found</p>
+            <h2>Check power, slope and wind.</h2>
+            <p>The current inputs do not produce a usable positive velocity.</p>
+          </section>
+
+          <section class="result-success hidden" id="result-success">
+            <div class="result-hero">
+              <p>Predicted Time</p>
+              <strong id="predicted-time">--</strong>
+              <span id="scenario-summary">--</span>
+            </div>
+
+            <div class="metric-grid">
+              <div class="metric-tile">
+                <span>Average Speed</span>
+                <strong id="metric-speed">--</strong>
+              </div>
+              <div class="metric-tile">
+                <span>W/kg</span>
+                <strong id="metric-wkg">--</strong>
+              </div>
+              <div class="metric-tile">
+                <span>Total Mass</span>
+                <strong id="metric-mass">--</strong>
+              </div>
+              <div class="metric-tile">
+                <span>Wheel Power</span>
+                <strong id="metric-wheel-power">--</strong>
+              </div>
+            </div>
+
+            <section class="result-section">
+              <div class="section-title-row">
+                <h2>Power Breakdown</h2>
+                <span id="rider-power">--</span>
+              </div>
+              <div class="breakdown-bar" aria-hidden="true">
+                <span class="bar-segment gravity" id="bar-gravity"></span>
+                <span class="bar-segment aero" id="bar-aero"></span>
+                <span class="bar-segment rolling" id="bar-rolling"></span>
+                <span class="bar-segment loss" id="bar-loss"></span>
+              </div>
+              <div class="breakdown-list" id="breakdown-list"></div>
+            </section>
+
+            <section class="limiter-box" id="limiter-box">
+              <span>Main Limiter</span>
+              <strong id="limiter-title">--</strong>
+              <p id="limiter-copy">--</p>
+            </section>
+
+            <section class="result-section drafting-output hidden" id="drafting-output">
+              <div class="section-title-row">
+                <h2>Drafting Analysis</h2>
+                <span id="drafting-summary">--</span>
+              </div>
+              <dl class="drafting-metrics">
+                <div><dt>Effective CdA</dt><dd id="drafting-effective-cda">--</dd></div>
+                <div><dt>Drag Reduction</dt><dd id="drafting-reduction">--</dd></div>
+                <div><dt>Group Avg Power</dt><dd id="drafting-group-power">--</dd></div>
+                <div><dt>Power Variance</dt><dd id="drafting-variance">--</dd></div>
+              </dl>
+            </section>
+
+            <div class="warning-list" id="warning-list"></div>
+
+            <section class="result-section assumptions">
+              <h2>Model Assumptions</h2>
+              <ul>
+                <li>Uses average grade only, not full elevation profile.</li>
+                <li>Assumes constant power.</li>
+                <li>Assumes constant wind.</li>
+                <li id="assumption-drafting">Does not account for drafting.</li>
+                <li>CdA and Crr are estimates.</li>
+              </ul>
+            </section>
+
+            <details class="physics-details">
+              <summary>Physics Details <span>⌄</span></summary>
+              <dl>
+                <div><dt>Gravity force</dt><dd id="detail-g-force">--</dd></div>
+                <div><dt>Aero force</dt><dd id="detail-a-force">--</dd></div>
+                <div><dt>Rolling force</dt><dd id="detail-r-force">--</dd></div>
+                <div><dt>Total force</dt><dd id="detail-force">--</dd></div>
+                <div><dt>Air density</dt><dd id="detail-air-density">--</dd></div>
+                <div><dt>Effective CdA</dt><dd id="detail-effective-cda">--</dd></div>
+                <div><dt>Velocity</dt><dd id="detail-velocity">--</dd></div>
+                <div><dt>Slope ratio</dt><dd id="detail-slope">--</dd></div>
+                <div><dt>Drivetrain loss</dt><dd id="detail-loss">--</dd></div>
+              </dl>
+            </details>
+          </section>
+        </aside>
+      </main>
+    </div>
+
+    <script type="module" src="./src/app/main.js"></script>
+  </body>
+</html>

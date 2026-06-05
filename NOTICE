@@ -1,0 +1,13 @@
+Segment Performance Predictor
+
+This project adapts the cycling physics and drafting model from the Performance
+Predictor in sauce4strava:
+
+https://github.com/SauceLLC/sauce4strava
+
+sauce4strava is distributed under the MIT License.
+
+Original upstream copyright:
+
+Copyright (c) 2015 Justin Mayfield
+
