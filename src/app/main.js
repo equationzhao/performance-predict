@@ -569,7 +569,7 @@ function renderBreakdown(result) {
     const item = document.createElement("div");
     item.className = "breakdown-row";
     item.innerHTML = `
-      <span class="breakdown-label"><span class="dot ${row.key}"></span>${row.label}</span>
+      <span class="breakdown-label ${row.key}">${row.label}</span>
       <strong>${formatCompactNumber(row.watts, 0)} W</strong>
       <span>${formatNumber(row.pct * 100, 0)}%</span>
     `;
