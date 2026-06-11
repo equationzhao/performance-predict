@@ -764,9 +764,9 @@ function renderPowerModelPanel() {
   els.powerModelError.classList.toggle("hidden", connectionState !== "error");
 
   if (connectionState === "connected" && powerModelData) {
-    els.pmCp.value = String(powerModelData.cp);
-    els.pmWprime.value = String(powerModelData.wPrime);
-    els.pmPmax.value = String(powerModelData.pMax);
+    if (document.activeElement !== els.pmCp) els.pmCp.value = String(powerModelData.cp);
+    if (document.activeElement !== els.pmWprime) els.pmWprime.value = String(powerModelData.wPrime);
+    if (document.activeElement !== els.pmPmax) els.pmPmax.value = String(powerModelData.pMax);
     els.powerModelStatusPill.textContent = "Connected";
     els.powerModelStatusPill.classList.add("connected");
     els.powerModelStatusText.textContent = powerModelData.athleteId
