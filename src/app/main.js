@@ -6,6 +6,7 @@ import {
   PERSISTED_FIELDS,
   TERRAIN_LABELS,
 } from "../lib/presets.js";
+import SEGMENT_PRESETS from "../../data/segment-presets.json";
 import {
   buildPredictionResult,
   cyclingDraftDragReduction,
@@ -123,6 +124,7 @@ let powerModelData = loadPowerModel();
 let connectionState = powerModelData ? "connected" : "disconnected";
 let connectionError = "";
 let savedPowerW = "";
+let activeSegmentPreset = null;
 
 init();
 
@@ -170,6 +172,20 @@ function persistDefaults() {
 }
 
 function renderPresetControls() {
+  const spContainer = document.querySelector("#segment-presets");
+  if (spContainer) {
+    spContainer.innerHTML = "";
+    for (const preset of SEGMENT_PRESETS) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "segment-button";
+      button.dataset.presetId = preset.id;
+      button.textContent = preset.name;
+      button.title = `${preset.distanceKm} km · ${preset.gradePercent}%`;
+      spContainer.append(button);
+    }
+  }
+
   els.cdaPresets.innerHTML = "";
   for (const [key, preset] of Object.entries(CDA_PRESETS)) {
     const button = document.createElement("button");
@@ -216,6 +232,9 @@ function bindEvents() {
     }
     const value = event.target.type === "checkbox" ? event.target.checked : event.target.value;
     formState = { ...formState, [field]: value };
+    if (field === "distanceKm" || field === "gradePercent") {
+      activeSegmentPreset = null;
+    }
     if (field === "cda") {
       formState.cdaModified = true;
     }
@@ -290,6 +309,26 @@ function bindEvents() {
     render();
   });
 
+  const spContainer = document.querySelector("#segment-presets");
+  if (spContainer) {
+    spContainer.addEventListener("click", event => {
+      const button = event.target.closest("[data-preset-id]");
+      if (!button) return;
+      const preset = SEGMENT_PRESETS.find(p => p.id === button.dataset.presetId);
+      if (!preset) return;
+      formState = {
+        ...formState,
+        distanceKm: String(preset.distanceKm),
+        gradePercent: String(preset.gradePercent),
+        elevationM: String(preset.elevationM),
+      };
+      activeSegmentPreset = preset.id;
+      persistDefaults();
+      syncInputsFromState();
+      render();
+    });
+  }
+
   els.powerModeToggle.addEventListener("click", event => {
     const option = event.target.closest("[data-power-mode]");
     if (!option) return;
@@ -352,6 +391,10 @@ function loadFromUrl() {
     savePowerModel(powerModelData);
     connectionState = "connected";
   }
+  const sp = params.get("sp");
+  if (sp && SEGMENT_PRESETS.some(p => p.id === sp)) {
+    activeSegmentPreset = sp;
+  }
   return Object.keys(state).length > 0 ? state : null;
 }
 
@@ -367,6 +410,9 @@ function syncUrl() {
     params.set("cp", String(powerModelData.cp));
     params.set("w2", String(powerModelData.wPrime));
     params.set("pm", String(powerModelData.pMax));
+  }
+  if (activeSegmentPreset) {
+    params.set("sp", activeSegmentPreset);
   }
   const qs = params.toString();
   const url = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
@@ -396,6 +442,7 @@ function render() {
   renderDraftingControls();
   renderModeToggle();
   renderPowerModelPanel();
+  renderSegmentPresetStates();
 
   const validation = validateForm(formState);
   if (validation.status === "empty") {
@@ -486,6 +533,14 @@ function renderDraftingControls() {
   const groupDisabled = Boolean(formState.draftUseSameWeight);
   els.draftGroupBodyWeightKg.disabled = groupDisabled;
   els.draftGroupWeightField.classList.toggle("disabled", groupDisabled);
+}
+
+function renderSegmentPresetStates() {
+  const container = document.querySelector("#segment-presets");
+  if (!container) return;
+  for (const button of container.querySelectorAll("[data-preset-id]")) {
+    button.setAttribute("aria-pressed", String(button.dataset.presetId === activeSegmentPreset));
+  }
 }
 
 function renderEmpty(missingFields) {
