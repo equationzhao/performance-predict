@@ -119,12 +119,33 @@
 
             <div id="power-model-connected" class="hidden">
               <div class="readonly-grid three">
-                <div class="readonly-metric"><span>CP</span><strong id="pm-cp">--</strong></div>
-                <div class="readonly-metric"><span>W'</span><strong id="pm-wprime">--</strong></div>
-                <div class="readonly-metric"><span>Pmax</span><strong id="pm-pmax">--</strong></div>
+                <label class="field" for="pm-cp-input">
+                  <span class="field-label">CP</span>
+                  <span class="input-with-unit">
+                    <input id="pm-cp-input" type="text" inputmode="decimal" autocomplete="off" data-field="pmCp" />
+                    <span class="unit">W</span>
+                  </span>
+                </label>
+                <label class="field" for="pm-wprime-input">
+                  <span class="field-label">W'</span>
+                  <span class="input-with-unit">
+                    <input id="pm-wprime-input" type="text" inputmode="decimal" autocomplete="off" data-field="pmWprime" />
+                    <span class="unit">J</span>
+                  </span>
+                </label>
+                <label class="field" for="pm-pmax-input">
+                  <span class="field-label">Pmax</span>
+                  <span class="input-with-unit">
+                    <input id="pm-pmax-input" type="text" inputmode="decimal" autocomplete="off" data-field="pmPmax" />
+                    <span class="unit">W</span>
+                  </span>
+                </label>
               </div>
               <div class="power-model-footer">
-                <button type="button" id="intervals-disconnect-btn" class="disconnect-button">Disconnect</button>
+                <div class="power-model-footer-left">
+                  <button type="button" id="intervals-refresh-btn" class="refresh-button">Refresh</button>
+                  <button type="button" id="intervals-disconnect-btn" class="disconnect-button">Disconnect</button>
+                </div>
                 <span class="power-model-updated" id="pm-updated">--</span>
               </div>
             </div>

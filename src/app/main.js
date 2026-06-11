@@ -97,10 +97,11 @@ const els = {
   intervalsConnectBtn: document.querySelector("#intervals-connect-btn"),
   intervalsDisconnectBtn: document.querySelector("#intervals-disconnect-btn"),
   intervalsRetryBtn: document.querySelector("#intervals-retry-btn"),
-  pmCp: document.querySelector("#pm-cp"),
-  pmWprime: document.querySelector("#pm-wprime"),
-  pmPmax: document.querySelector("#pm-pmax"),
+  pmCp: document.querySelector("#pm-cp-input"),
+  pmWprime: document.querySelector("#pm-wprime-input"),
+  pmPmax: document.querySelector("#pm-pmax-input"),
   pmUpdated: document.querySelector("#pm-updated"),
+  intervalsRefreshBtn: document.querySelector("#intervals-refresh-btn"),
   powerModeToggle: document.querySelector("#power-mode-toggle"),
   modeToggleSlider: document.querySelector("#mode-toggle-slider"),
   bestEffortBtn: document.querySelector("#best-effort-btn"),
@@ -133,6 +134,7 @@ function init() {
     const creds = loadCredentials();
     if (creds) {
       powerModelData = { ...powerModelData, athleteId: creds.athleteId };
+      handleRefresh();
     }
   } else if (formState.powerMode === "best_effort") {
     formState = { ...formState, powerMode: "manual" };
@@ -304,6 +306,11 @@ function bindEvents() {
   els.intervalsConnectBtn.addEventListener("click", () => handleConnect());
   els.intervalsDisconnectBtn.addEventListener("click", () => handleDisconnect());
   els.intervalsRetryBtn.addEventListener("click", () => handleConnect());
+  els.intervalsRefreshBtn.addEventListener("click", () => handleRefresh());
+
+  els.pmCp.addEventListener("change", () => handlePowerModelEdit());
+  els.pmWprime.addEventListener("change", () => handlePowerModelEdit());
+  els.pmPmax.addEventListener("change", () => handlePowerModelEdit());
 }
 
 function persistDefaultsIfNeeded(field) {
@@ -757,9 +764,9 @@ function renderPowerModelPanel() {
   els.powerModelError.classList.toggle("hidden", connectionState !== "error");
 
   if (connectionState === "connected" && powerModelData) {
-    els.pmCp.textContent = `${formatCompactNumber(powerModelData.cp, 0)} W`;
-    els.pmWprime.textContent = `${formatCompactNumber(powerModelData.wPrime / 1000, 1)} kJ`;
-    els.pmPmax.textContent = `${formatCompactNumber(powerModelData.pMax, 0)} W`;
+    els.pmCp.value = String(powerModelData.cp);
+    els.pmWprime.value = String(powerModelData.wPrime);
+    els.pmPmax.value = String(powerModelData.pMax);
     els.powerModelStatusPill.textContent = "Connected";
     els.powerModelStatusPill.classList.add("connected");
     els.powerModelStatusText.textContent = powerModelData.athleteId
@@ -821,6 +828,39 @@ function handleDisconnect() {
   els.intervalsApiKey.value = "";
   renderPowerModelPanel();
   renderModeToggle();
+  scheduleRender();
+}
+
+async function handleRefresh() {
+  const creds = loadCredentials();
+  if (!creds) return;
+
+  connectionState = "loading";
+  renderPowerModelPanel();
+
+  try {
+    const model = await fetchPowerModel(creds);
+    powerModelData = { ...model, athleteId: creds.athleteId, fetchedAt: Date.now() };
+    savePowerModel(powerModelData);
+    connectionState = "connected";
+  } catch (err) {
+    connectionError = err.message || "Refresh failed.";
+    connectionState = "error";
+  }
+  renderPowerModelPanel();
+  scheduleRender();
+}
+
+function handlePowerModelEdit() {
+  const cp = Number(els.pmCp.value);
+  const wPrime = Number(els.pmWprime.value);
+  const pMax = Number(els.pmPmax.value);
+
+  if (!Number.isFinite(cp) || !Number.isFinite(wPrime) || !Number.isFinite(pMax)) return;
+  if (cp <= 0 || wPrime <= 0 || pMax <= 0) return;
+
+  powerModelData = { ...powerModelData, cp, wPrime, pMax, fetchedAt: Date.now() };
+  savePowerModel(powerModelData);
   scheduleRender();
 }
 

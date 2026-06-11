@@ -89,6 +89,10 @@ export const DEFAULT_FORM_STATE = {
 };
 
 export const PERSISTED_FIELDS = [
+  "distanceKm",
+  "gradePercent",
+  "elevationM",
+  "windMps",
   "bodyWeightKg",
   "gearWeightKg",
   "powerW",

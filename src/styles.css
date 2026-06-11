@@ -1201,6 +1201,33 @@ details[open] > summary .chevron {
   margin-top: 14px;
 }
 
+.power-model-footer-left {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.refresh-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 32px;
+  padding: 4px 10px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.refresh-button:hover {
+  color: var(--cyan);
+}
+
 .power-model-updated {
   color: var(--text-tertiary);
   font-family: var(--font-mono);
