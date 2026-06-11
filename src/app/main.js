@@ -6,7 +6,7 @@ import {
   PERSISTED_FIELDS,
   TERRAIN_LABELS,
 } from "../lib/presets.js";
-import SEGMENT_PRESETS from "../../data/segment-presets.json";
+import { SEGMENT_PRESETS } from "../lib/segment-presets.js";
 import {
   buildPredictionResult,
   cyclingDraftDragReduction,
