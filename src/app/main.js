@@ -143,6 +143,10 @@ function init() {
 }
 
 function loadInitialState() {
+  const urlState = loadFromUrl();
+  if (urlState) {
+    return { ...DEFAULT_FORM_STATE, ...urlState };
+  }
   try {
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
     const allowed = Object.fromEntries(PERSISTED_FIELDS.map(field => [field, stored[field]]));
@@ -324,6 +328,38 @@ function scheduleRender() {
   recalcTimer = setTimeout(render, 80);
 }
 
+const URL_PARAM_MAP = {
+  d: "distanceKm", g: "gradePercent", e: "elevationM", w: "windMps",
+  bw: "bodyWeightKg", gw: "gearWeightKg", p: "powerW",
+  cda: "cda", crr: "crr", m: "powerMode",
+};
+
+function loadFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.size === 0) return null;
+  const state = {};
+  for (const [short, full] of Object.entries(URL_PARAM_MAP)) {
+    const val = params.get(short);
+    if (val != null && val !== "") {
+      state[full] = val;
+    }
+  }
+  return Object.keys(state).length > 0 ? state : null;
+}
+
+function syncUrl() {
+  const params = new URLSearchParams();
+  for (const [short, full] of Object.entries(URL_PARAM_MAP)) {
+    const val = formState[full];
+    if (val != null && val !== "" && val !== DEFAULT_FORM_STATE[full]) {
+      params.set(short, String(val));
+    }
+  }
+  const qs = params.toString();
+  const url = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
+  window.history.replaceState(null, "", url);
+}
+
 function syncInputsFromState() {
   for (const input of document.querySelectorAll("[data-field]")) {
     const field = input.dataset.field;
@@ -358,6 +394,7 @@ function render() {
     return;
   }
   renderPrediction(validation.input);
+  syncUrl();
 }
 
 function renderDerivedValues() {
