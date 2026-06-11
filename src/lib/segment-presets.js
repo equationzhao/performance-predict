@@ -7,4 +7,5 @@ export const SEGMENT_PRESETS = [
   { id: "angliru", name: "Angliru", distanceKm: 12.5, gradePercent: 10.1, elevationM: 900 },
   { id: "madeleine", name: "Madeleine", distanceKm: 19.0, gradePercent: 7.9, elevationM: 1100 },
   { id: "arrate", name: "Arrate", distanceKm: 7.2, gradePercent: 6.2, elevationM: 400 },
+  { id: "fuji", name: "Mt. Fuji", distanceKm: 23.3, gradePercent: 6.0, elevationM: 3000 },
 ];
