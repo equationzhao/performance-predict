@@ -15,6 +15,12 @@ import {
 } from "../lib/physics.js";
 import { buildWarnings, validateForm } from "../lib/validation.js";
 import { clamp, formatCompactNumber, formatNumber, formatSignedMeters, formatTime } from "../lib/format.js";
+import { getPowerForDuration, estimateTau } from "../lib/power-model.js";
+import { solveBestEffort } from "../lib/best-effort.js";
+import {
+  loadCredentials, saveCredentials, clearCredentials, maskApiKey,
+  fetchPowerModel, savePowerModel, loadPowerModel, clearPowerModel,
+} from "../lib/intervals-api.js";
 
 const STORAGE_KEY = "segment-performance-predictor-defaults-v1";
 
@@ -45,6 +51,7 @@ const els = {
   resultInvalid: document.querySelector("#result-invalid"),
   resultNoSolution: document.querySelector("#result-no-solution"),
   resultSuccess: document.querySelector("#result-success"),
+  resultHero: document.querySelector("#result-hero"),
   missingList: document.querySelector("#missing-list"),
   predictedTime: document.querySelector("#predicted-time"),
   scenarioSummary: document.querySelector("#scenario-summary"),
@@ -77,10 +84,44 @@ const els = {
   detailVelocity: document.querySelector("#detail-velocity"),
   detailSlope: document.querySelector("#detail-slope"),
   detailLoss: document.querySelector("#detail-loss"),
+  powerModelPanel: document.querySelector("#power-model-panel"),
+  powerModelStatusText: document.querySelector("#power-model-status-text"),
+  powerModelStatusPill: document.querySelector("#power-model-status-pill"),
+  powerModelDisconnected: document.querySelector("#power-model-disconnected"),
+  powerModelLoading: document.querySelector("#power-model-loading"),
+  powerModelConnected: document.querySelector("#power-model-connected"),
+  powerModelError: document.querySelector("#power-model-error"),
+  powerModelErrorMsg: document.querySelector("#power-model-error-msg"),
+  intervalsAthleteId: document.querySelector("#intervals-athlete-id"),
+  intervalsApiKey: document.querySelector("#intervals-api-key"),
+  intervalsConnectBtn: document.querySelector("#intervals-connect-btn"),
+  intervalsDisconnectBtn: document.querySelector("#intervals-disconnect-btn"),
+  intervalsRetryBtn: document.querySelector("#intervals-retry-btn"),
+  pmCp: document.querySelector("#pm-cp"),
+  pmWprime: document.querySelector("#pm-wprime"),
+  pmPmax: document.querySelector("#pm-pmax"),
+  pmUpdated: document.querySelector("#pm-updated"),
+  powerModeToggle: document.querySelector("#power-mode-toggle"),
+  modeToggleSlider: document.querySelector("#mode-toggle-slider"),
+  bestEffortBtn: document.querySelector("#best-effort-btn"),
+  manualPowerFields: document.querySelector("#manual-power-fields"),
+  bestEffortInfo: document.querySelector("#best-effort-info"),
+  bestEffortBadge: document.querySelector("#best-effort-badge"),
+  metricWheelPowerLabel: document.querySelector("#metric-wheel-power-label"),
+  effortProgress: document.querySelector("#effort-progress"),
+  effortProgressFill: document.querySelector("#effort-progress-fill"),
+  aboveCpWarning: document.querySelector("#above-cp-warning"),
+  aboveCpCopy: document.querySelector("#above-cp-copy"),
+  wpriProgressFill: document.querySelector("#wpri-progress-fill"),
+  wpriProgressLabel: document.querySelector("#wpri-progress-label"),
 };
 
 let formState = loadInitialState();
 let recalcTimer;
+let powerModelData = loadPowerModel();
+let connectionState = powerModelData ? "connected" : "disconnected";
+let connectionError = "";
+let savedPowerW = "";
 
 init();
 
@@ -88,6 +129,14 @@ function init() {
   renderPresetControls();
   syncInputsFromState();
   bindEvents();
+  if (powerModelData) {
+    const creds = loadCredentials();
+    if (creds) {
+      powerModelData = { ...powerModelData, athleteId: creds.athleteId };
+    }
+  } else if (formState.powerMode === "best_effort") {
+    formState = { ...formState, powerMode: "manual" };
+  }
   render();
 }
 
@@ -234,6 +283,27 @@ function bindEvents() {
     syncInputsFromState();
     render();
   });
+
+  els.powerModeToggle.addEventListener("click", event => {
+    const option = event.target.closest("[data-power-mode]");
+    if (!option) return;
+    const mode = option.dataset.powerMode;
+    if (mode === "best_effort" && !powerModelData) return;
+    if (formState.powerMode === mode) return;
+
+    if (mode === "best_effort") {
+      savedPowerW = formState.powerW;
+      formState = { ...formState, powerMode: "best_effort" };
+    } else {
+      formState = { ...formState, powerMode: "manual", powerW: savedPowerW };
+    }
+    persistDefaults();
+    scheduleRender();
+  });
+
+  els.intervalsConnectBtn.addEventListener("click", () => handleConnect());
+  els.intervalsDisconnectBtn.addEventListener("click", () => handleDisconnect());
+  els.intervalsRetryBtn.addEventListener("click", () => handleConnect());
 }
 
 function persistDefaultsIfNeeded(field) {
@@ -268,6 +338,8 @@ function render() {
   renderDerivedValues();
   renderPresetStates();
   renderDraftingControls();
+  renderModeToggle();
+  renderPowerModelPanel();
 
   const validation = validateForm(formState);
   if (validation.status === "empty") {
@@ -381,6 +453,14 @@ function renderInvalid(errors) {
 
 function renderPrediction(input) {
   try {
+    if (input.rider.powerMode === "best_effort") {
+      if (!powerModelData) {
+        renderNoSolution();
+        return;
+      }
+      renderBestEffortPrediction(input);
+      return;
+    }
     const { estimate, drafting } = estimateWithDrafting(input);
 
     if (!estimate || !Number.isFinite(estimate.velocity) || estimate.velocity <= 0) {
@@ -408,6 +488,12 @@ function renderSuccess(input, result, warnings) {
   const wkg = `${formatNumber(result.wattsPerKg, 2)} W/kg`;
   const mass = `${formatNumber(result.totalWeightKg, 1)} kg`;
   const wheelPower = `${formatCompactNumber(result.wheelPowerW, 0)} W`;
+
+  els.resultHero.classList.remove("best-effort");
+  els.bestEffortBadge.classList.add("hidden");
+  els.metricWheelPowerLabel.textContent = "Wheel Power";
+  els.effortProgress.classList.add("hidden");
+  els.aboveCpWarning.classList.add("hidden");
 
   els.predictedTime.textContent = time;
   els.scenarioSummary.textContent =
@@ -641,6 +727,199 @@ function renderPhysicsDetails(result) {
   els.detailVelocity.textContent = `${formatNumber(result.velocityMps, 3)} m/s`;
   els.detailSlope.textContent = formatNumber(result.slopeRatio, 4);
   els.detailLoss.textContent = formatNumber(result.drivetrainLoss, 3);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   Power Model & Best Effort
+   ═══════════════════════════════════════════════════════════ */
+
+function renderModeToggle() {
+  const mode = formState.powerMode || "manual";
+  const isManual = mode === "manual";
+
+  for (const btn of els.powerModeToggle.querySelectorAll("[data-power-mode]")) {
+    const active = btn.dataset.powerMode === mode;
+    btn.setAttribute("aria-checked", String(active));
+    btn.classList.toggle("active", active);
+  }
+
+  els.modeToggleSlider.dataset.active = mode;
+  els.bestEffortBtn.disabled = !powerModelData;
+  els.bestEffortBtn.title = powerModelData ? "" : "Connect to Intervals.icu first";
+  els.manualPowerFields.classList.toggle("hidden", !isManual);
+  els.bestEffortInfo.classList.toggle("hidden", isManual);
+}
+
+function renderPowerModelPanel() {
+  els.powerModelDisconnected.classList.toggle("hidden", connectionState !== "disconnected");
+  els.powerModelLoading.classList.toggle("hidden", connectionState !== "loading");
+  els.powerModelConnected.classList.toggle("hidden", connectionState !== "connected");
+  els.powerModelError.classList.toggle("hidden", connectionState !== "error");
+
+  if (connectionState === "connected" && powerModelData) {
+    els.pmCp.textContent = `${formatCompactNumber(powerModelData.cp, 0)} W`;
+    els.pmWprime.textContent = `${formatCompactNumber(powerModelData.wPrime / 1000, 1)} kJ`;
+    els.pmPmax.textContent = `${formatCompactNumber(powerModelData.pMax, 0)} W`;
+    els.powerModelStatusPill.textContent = "Connected";
+    els.powerModelStatusPill.classList.add("connected");
+    els.powerModelStatusText.textContent = powerModelData.athleteId
+      ? `Connected to ${powerModelData.athleteId}`
+      : "Connected to Intervals.icu";
+    if (powerModelData.fetchedAt) {
+      const ago = Math.max(0, Math.round((Date.now() - powerModelData.fetchedAt) / 60000));
+      els.pmUpdated.textContent = ago < 1 ? "Updated just now" : `Updated ${ago} min ago`;
+    }
+  } else if (connectionState === "error") {
+    els.powerModelErrorMsg.textContent = connectionError;
+    els.powerModelStatusPill.textContent = "Error";
+    els.powerModelStatusPill.classList.remove("connected");
+    els.powerModelStatusText.textContent = "Connection failed";
+  } else if (connectionState === "loading") {
+    els.powerModelStatusPill.textContent = "Loading";
+    els.powerModelStatusPill.classList.remove("connected");
+  } else {
+    els.powerModelStatusPill.textContent = "Disconnected";
+    els.powerModelStatusPill.classList.remove("connected");
+    els.powerModelStatusText.textContent = "Connect to Intervals.icu to unlock Best Effort.";
+  }
+}
+
+async function handleConnect() {
+  const athleteId = els.intervalsAthleteId.value.trim();
+  const apiKey = els.intervalsApiKey.value.trim();
+  if (!athleteId || !apiKey) return;
+
+  connectionState = "loading";
+  renderPowerModelPanel();
+
+  try {
+    const model = await fetchPowerModel({ athleteId, apiKey });
+    powerModelData = { ...model, athleteId, fetchedAt: Date.now() };
+    saveCredentials(athleteId, apiKey);
+    savePowerModel(powerModelData);
+    connectionState = "connected";
+    formState = { ...formState, intervalsConnected: true };
+  } catch (err) {
+    connectionError = err.message || "Connection failed.";
+    connectionState = "error";
+  }
+  renderPowerModelPanel();
+  scheduleRender();
+}
+
+function handleDisconnect() {
+  clearCredentials();
+  clearPowerModel();
+  powerModelData = null;
+  connectionState = "disconnected";
+  connectionError = "";
+  formState = { ...formState, intervalsConnected: false };
+  if (formState.powerMode === "best_effort") {
+    formState = { ...formState, powerMode: "manual", powerW: savedPowerW };
+  }
+  els.intervalsAthleteId.value = "";
+  els.intervalsApiKey.value = "";
+  renderPowerModelPanel();
+  renderModeToggle();
+  scheduleRender();
+}
+
+function buildCpModel(data) {
+  return { cp: data.cp, wPrime: data.wPrime, pMax: data.pMax };
+}
+
+function renderBestEffortPrediction(input) {
+  const cpModel = buildCpModel(powerModelData);
+  const solution = solveBestEffort({
+    cpModel,
+    distanceM: input.segment.distanceM,
+    slopeRatio: input.segment.slopeRatio,
+    weightKg: input.rider.bodyWeightKg + input.rider.gearWeightKg,
+    crr: input.equipment.crr,
+    cda: input.equipment.cda,
+    elevationM: input.segment.elevationM,
+    windMps: input.segment.windMps,
+    drivetrainLoss: input.rider.drivetrainLoss,
+  });
+
+  if (!solution || !Number.isFinite(solution.velocityMps) || solution.velocityMps <= 0) {
+    renderNoSolution();
+    return;
+  }
+
+  const syntheticInput = {
+    ...input,
+    rider: { ...input.rider, powerW: solution.powerW },
+  };
+
+  const { estimate, drafting } = estimateWithDrafting(syntheticInput);
+  if (!estimate || !Number.isFinite(estimate.velocity) || estimate.velocity <= 0) {
+    renderNoSolution();
+    return;
+  }
+
+  const result = buildPredictionResult(syntheticInput, estimate, drafting);
+  result.bestEffort = {
+    modelPower: solution.powerW,
+    timeSec: solution.timeSec,
+    converged: solution.converged,
+    iterations: solution.iterations,
+    effortPercent: (solution.powerW / powerModelData.cp) * 100,
+    isAboveCp: solution.powerW > powerModelData.cp,
+    wPrimeUsed: solution.powerW > powerModelData.cp
+      ? (solution.powerW - powerModelData.cp) * solution.timeSec
+      : 0,
+    wPrimeTotal: powerModelData.wPrime,
+  };
+
+  showState("success");
+  renderSuccessBestEffort(syntheticInput, result, buildWarnings(syntheticInput));
+}
+
+function renderSuccessBestEffort(input, result, warnings) {
+  const be = result.bestEffort;
+  const time = formatTime(result.timeSec);
+  const speed = `${formatNumber(result.speedKph, 1)} km/h`;
+  const wkg = `${formatNumber(result.wattsPerKg, 2)} W/kg`;
+  const mass = `${formatNumber(result.totalWeightKg, 1)} kg`;
+
+  els.resultHero.classList.add("best-effort");
+  els.bestEffortBadge.classList.remove("hidden");
+  els.predictedTime.textContent = time;
+  els.scenarioSummary.textContent =
+    `${formatNumber(input.segment.distanceM / 1000, 2)} km · ` +
+    `${formatNumber(input.segment.gradePercent, 1)}% · ` +
+    `${formatCompactNumber(be.modelPower, 0)} W` +
+    `  ·  CP Model · ${formatNumber(be.effortPercent, 0)}% of CP`;
+  els.metricSpeed.textContent = speed;
+  els.metricWkg.textContent = wkg;
+  els.metricMass.textContent = mass;
+
+  els.metricWheelPowerLabel.textContent = "Effort";
+  els.metricWheelPower.textContent = `${formatCompactNumber(be.modelPower, 0)} W`;
+  els.effortProgress.classList.remove("hidden");
+  const fillPct = Math.min(be.effortPercent, 100);
+  els.effortProgressFill.style.width = `${fillPct}%`;
+  els.effortProgressFill.className = `effort-progress-fill ${be.isAboveCp ? "above-cp" : be.effortPercent >= 99 ? "at-cp" : "below-cp"}`;
+
+  els.riderPower.textContent = `Required Power ${formatCompactNumber(be.modelPower, 0)} W`;
+
+  renderBreakdown(result);
+  renderLimiter(result);
+  renderDraftingResult(result);
+  renderWarnings(warnings);
+  renderPhysicsDetails(result);
+
+  els.aboveCpWarning.classList.toggle("hidden", !be.isAboveCp);
+  if (be.isAboveCp) {
+    const overPct = formatNumber(be.effortPercent - 100, 0);
+    els.aboveCpCopy.textContent = `This effort requires ${overPct}% above CP. W' drains at ${formatCompactNumber((be.modelPower - powerModelData.cp) * 60, 0)} J/min.`;
+    const wpriPct = be.wPrimeTotal > 0 ? (be.wPrimeUsed / be.wPrimeTotal) * 100 : 0;
+    els.wpriProgressFill.style.width = `${Math.min(wpriPct, 100)}%`;
+    els.wpriProgressLabel.textContent = `${formatNumber(wpriPct, 0)}% W' used`;
+  }
+
+  setMobileSummary(time, `${speed} · ${wkg} · Best Effort`);
 }
 
 function clearFieldErrors() {

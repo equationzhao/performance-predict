@@ -60,6 +60,8 @@ export function validateForm(form) {
   const missingFields = [];
   const values = {};
 
+  const powerMode = form.powerMode || "manual";
+
   const specs = {
     distanceKm: { required: true, min: 0.001, max: 500 },
     gradePercent: { required: true, min: -30, max: 30 },
@@ -67,7 +69,7 @@ export function validateForm(form) {
     windMps: { required: false, min: -20, max: 20 },
     bodyWeightKg: { required: true, min: 20, max: 200 },
     gearWeightKg: { required: false, min: 0, max: 40 },
-    powerW: { required: true, min: 1, max: 2000 },
+    powerW: { required: powerMode !== "best_effort", min: 1, max: 2000 },
     drivetrainLossPercent: { required: false, min: 0, max: 20 },
     cda: { required: true, min: 0.15, max: 0.70 },
     crr: { required: true, min: 0.0001, max: 0.10 },
@@ -167,6 +169,7 @@ export function validateForm(form) {
         gearWeightKg,
         powerW: values.powerW,
         drivetrainLoss: drivetrainLossPercent / 100,
+        powerMode,
       },
       equipment: {
         cda: values.cda,

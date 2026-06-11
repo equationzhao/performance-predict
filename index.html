@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300..800;1,9..40,300..800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="./src/styles.css" />
+    <link rel="stylesheet" href="./src/styles.css?v=2" />
   </head>
   <body>
     <div class="app-shell">
@@ -43,7 +43,7 @@
               <label class="field" for="distanceKm">
                 <span class="field-label">Distance</span>
                 <span class="input-with-unit">
-                  <input id="distanceKm" name="distanceKm" type="text" inputmode="decimal" autocomplete="off" placeholder="3.20" data-field="distanceKm" />
+                  <input id="distanceKm" name="distanceKm" type="text" inputmode="decimal" autocomplete="off" data-field="distanceKm" />
                   <span class="unit">km</span>
                 </span>
                 <span class="field-message" data-error-for="distanceKm"></span>
@@ -52,7 +52,7 @@
               <label class="field" for="gradePercent">
                 <span class="field-label">Average Grade</span>
                 <span class="input-with-unit">
-                  <input id="gradePercent" name="gradePercent" type="text" inputmode="decimal" autocomplete="off" placeholder="7.5" data-field="gradePercent" />
+                  <input id="gradePercent" name="gradePercent" type="text" inputmode="decimal" autocomplete="off" data-field="gradePercent" />
                   <span class="unit">%</span>
                 </span>
                 <span class="field-message" data-error-for="gradePercent"></span>
@@ -84,6 +84,59 @@
             <p class="field-hint">Positive wind means headwind; negative means tailwind.</p>
           </section>
 
+          <section class="section-panel" id="power-model-panel">
+            <div class="section-heading">
+              <div>
+                <h2>Power Model</h2>
+                <p id="power-model-status-text">Connect to Intervals.icu to unlock Best Effort.</p>
+              </div>
+              <span class="status-pill" id="power-model-status-pill">Disconnected</span>
+            </div>
+
+            <div id="power-model-disconnected">
+              <div class="field-grid two">
+                <label class="field" for="intervals-athlete-id">
+                  <span class="field-label">Athlete ID</span>
+                  <span class="input-with-unit">
+                    <input id="intervals-athlete-id" type="text" placeholder="i12345" />
+                  </span>
+                </label>
+                <label class="field" for="intervals-api-key">
+                  <span class="field-label">API Key</span>
+                  <span class="input-with-unit">
+                    <input id="intervals-api-key" type="password" autocomplete="off" />
+                  </span>
+                </label>
+              </div>
+              <button type="button" id="intervals-connect-btn" class="connect-button">Connect to Intervals.icu</button>
+              <p class="field-hint">No data is stored on any server. Credentials saved locally, never visible.</p>
+            </div>
+
+            <div id="power-model-loading" class="hidden">
+              <div class="shimmer"></div>
+              <p class="power-model-loading-text">Fetching power data...</p>
+            </div>
+
+            <div id="power-model-connected" class="hidden">
+              <div class="readonly-grid three">
+                <div class="readonly-metric"><span>CP</span><strong id="pm-cp">--</strong></div>
+                <div class="readonly-metric"><span>W'</span><strong id="pm-wprime">--</strong></div>
+                <div class="readonly-metric"><span>Pmax</span><strong id="pm-pmax">--</strong></div>
+              </div>
+              <div class="power-model-footer">
+                <button type="button" id="intervals-disconnect-btn" class="disconnect-button">Disconnect</button>
+                <span class="power-model-updated" id="pm-updated">--</span>
+              </div>
+            </div>
+
+            <div id="power-model-error" class="hidden">
+              <div class="power-model-error-box">
+                <span id="power-model-error-msg">Invalid credentials.</span>
+                <button type="button" id="intervals-retry-btn" class="retry-button">Retry</button>
+              </div>
+            </div>
+          </section>
+
           <section class="section-panel">
             <div class="section-heading">
               <div>
@@ -92,11 +145,20 @@
               </div>
             </div>
 
+            <div class="mode-toggle-row">
+              <span class="control-label">Power Mode</span>
+              <div class="mode-toggle" id="power-mode-toggle" role="radiogroup" aria-label="Power mode">
+                <div class="mode-toggle-slider" id="mode-toggle-slider"></div>
+                <button type="button" class="mode-toggle-option active" data-power-mode="manual" role="radio" aria-checked="true">Manual</button>
+                <button type="button" class="mode-toggle-option" data-power-mode="best_effort" role="radio" aria-checked="false" id="best-effort-btn">Best Effort</button>
+              </div>
+            </div>
+
             <div class="field-grid three">
               <label class="field" for="bodyWeightKg">
                 <span class="field-label">Body Weight</span>
                 <span class="input-with-unit">
-                  <input id="bodyWeightKg" name="bodyWeightKg" type="text" inputmode="decimal" autocomplete="off" placeholder="69.0" data-field="bodyWeightKg" />
+                  <input id="bodyWeightKg" name="bodyWeightKg" type="text" inputmode="decimal" autocomplete="off" data-field="bodyWeightKg" />
                   <span class="unit">kg</span>
                 </span>
                 <span class="field-message" data-error-for="bodyWeightKg"></span>
@@ -111,14 +173,20 @@
                 <span class="field-message" data-error-for="gearWeightKg"></span>
               </label>
 
-              <label class="field" for="powerW">
-                <span class="field-label">Target Power</span>
-                <span class="input-with-unit">
-                  <input id="powerW" name="powerW" type="text" inputmode="decimal" autocomplete="off" placeholder="320" data-field="powerW" />
-                  <span class="unit">W</span>
-                </span>
-                <span class="field-message" data-error-for="powerW"></span>
-              </label>
+              <div id="manual-power-fields">
+                <label class="field" for="powerW">
+                  <span class="field-label">Target Power</span>
+                  <span class="input-with-unit">
+                    <input id="powerW" name="powerW" type="text" inputmode="decimal" autocomplete="off" data-field="powerW" />
+                    <span class="unit">W</span>
+                  </span>
+                  <span class="field-message" data-error-for="powerW"></span>
+                </label>
+              </div>
+            </div>
+
+            <div id="best-effort-info" class="hidden">
+              <p class="best-effort-description">Required power determined by your CP model based on segment duration. Adjust segment params to see how predicted power and time change together.</p>
             </div>
 
             <div class="readonly-grid">
@@ -293,7 +361,8 @@
           </section>
 
           <section class="result-success hidden" id="result-success">
-            <div class="result-hero">
+            <div class="result-hero" id="result-hero">
+              <span class="best-effort-badge hidden" id="best-effort-badge">Best Effort Predict</span>
               <p>Predicted Time</p>
               <strong id="predicted-time">--</strong>
               <span id="scenario-summary">--</span>
@@ -312,9 +381,12 @@
                 <span>Total Mass</span>
                 <strong id="metric-mass">--</strong>
               </div>
-              <div class="metric-tile">
-                <span>Wheel Power</span>
+              <div class="metric-tile" id="metric-wheel-power-tile">
+                <span id="metric-wheel-power-label">Wheel Power</span>
                 <strong id="metric-wheel-power">--</strong>
+                <div class="effort-progress hidden" id="effort-progress">
+                  <div class="effort-progress-fill" id="effort-progress-fill"></div>
+                </div>
               </div>
             </div>
 
@@ -352,6 +424,15 @@
             </section>
 
             <div class="warning-list" id="warning-list"></div>
+
+            <section class="warning-callout above-cp hidden" id="above-cp-warning">
+              <strong>Above Critical Power</strong>
+              <p id="above-cp-copy"></p>
+              <div class="effort-progress-bar">
+                <div class="effort-progress-fill" id="wpri-progress-fill"></div>
+              </div>
+              <span id="wpri-progress-label"></span>
+            </section>
 
             <section class="result-section assumptions">
               <h2>Model Assumptions</h2>

@@ -64,10 +64,10 @@ export const TERRAIN_LABELS = {
 export const DEFAULT_FORM_STATE = {
   distanceKm: "",
   gradePercent: "",
-  elevationM: "0",
-  windMps: "0.0",
+  elevationM: "",
+  windMps: "0",
   bodyWeightKg: "",
-  gearWeightKg: "13.0",
+  gearWeightKg: "",
   powerW: "",
   drivetrainLossPercent: "3.5",
   cda: "0.320",
@@ -84,6 +84,8 @@ export const DEFAULT_FORM_STATE = {
   draftWorkPercent: "50",
   draftUseSameWeight: true,
   draftGroupBodyWeightKg: "",
+  powerMode: "manual",
+  intervalsConnected: false,
 };
 
 export const PERSISTED_FIELDS = [
@@ -105,4 +107,5 @@ export const PERSISTED_FIELDS = [
   "draftWorkPercent",
   "draftUseSameWeight",
   "draftGroupBodyWeightKg",
+  "powerMode",
 ];

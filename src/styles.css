@@ -1118,6 +1118,338 @@ details[open] > summary .chevron {
 }
 
 /* ═══════════════════════════════════════════════════════════
+   v0.2 — Power Model & Best Effort
+   ═══════════════════════════════════════════════════════════ */
+
+:root {
+  --gold: #f5c542;
+  --gold-dim: rgba(245, 197, 66, 0.10);
+  --gold-glow: rgba(245, 197, 66, 0.25);
+  --gold-strong: #ffd470;
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out-quart: cubic-bezier(0.76, 0, 0.24, 1);
+}
+
+/* ── Connection Panel ── */
+
+.connect-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  margin-top: 14px;
+  padding: 10px 20px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--cyan);
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.connect-button:hover {
+  border-color: var(--cyan);
+  background: var(--cyan-dim);
+}
+
+.disconnect-button {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.disconnect-button:hover {
+  border-color: var(--red);
+  color: var(--red);
+}
+
+.retry-button {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 4px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--red);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.retry-button:hover {
+  background: var(--red-dim);
+}
+
+.power-model-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 14px;
+}
+
+.power-model-updated {
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+}
+
+.power-model-error-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 1px solid rgba(248, 113, 113, 0.3);
+  border-radius: var(--radius-sm);
+  background: var(--red-dim);
+  color: var(--red);
+  font-size: 0.82rem;
+}
+
+.power-model-loading-text {
+  margin: 10px 0 0;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+  text-align: center;
+}
+
+.shimmer {
+  height: 8px;
+  border-radius: 4px;
+  background: linear-gradient(
+    90deg,
+    var(--surface-raised) 0%,
+    var(--surface-overlay) 40%,
+    var(--surface-raised) 80%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.status-pill.connected {
+  border-color: var(--green);
+  background: var(--green-dim);
+  color: var(--green);
+}
+
+.readonly-grid.three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.field-grid.two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/* ── Mode Toggle ── */
+
+.mode-toggle-row {
+  display: grid;
+  gap: 7px;
+  margin-bottom: 16px;
+}
+
+.mode-toggle {
+  position: relative;
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-input);
+  overflow: hidden;
+}
+
+.mode-toggle-option {
+  flex: 1;
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-ui);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  position: relative;
+  z-index: 1;
+  transition: color 280ms ease;
+}
+
+.mode-toggle-option[aria-checked="true"] {
+  color: var(--text);
+}
+
+.mode-toggle-option:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.mode-toggle-slider {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  width: calc(50% - 3px);
+  border-radius: calc(var(--radius-sm) - 2px);
+  border: 1px solid var(--cyan);
+  background: var(--cyan-dim);
+  transition: transform 280ms var(--ease-in-out-quart),
+              border-color 280ms ease,
+              background-color 280ms ease;
+  pointer-events: none;
+}
+
+.mode-toggle-slider[data-active="best_effort"] {
+  transform: translateX(calc(100% + 0px));
+  border-color: var(--gold);
+  background: var(--gold-dim);
+}
+
+.best-effort-description {
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+}
+
+/* ── Best Effort Hero ── */
+
+.result-hero.best-effort {
+  border-color: var(--gold-dim);
+  background:
+    radial-gradient(ellipse at 50% 100%, var(--gold-dim), transparent 70%),
+    var(--surface-raised);
+}
+
+.result-hero.best-effort::before {
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+}
+
+.result-hero.best-effort p {
+  color: var(--gold);
+}
+
+.best-effort-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border: 1px solid var(--gold-dim);
+  border-radius: 999px;
+  background: var(--gold-dim);
+  color: var(--gold);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+@keyframes hero-pulse-gold {
+  0% { box-shadow: 0 0 0 0 var(--gold-glow); }
+  40% { box-shadow: 0 0 30px 4px var(--gold-glow); }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+
+.result-hero.pulse {
+  animation: hero-pulse-gold 600ms var(--ease-in-out-quart);
+}
+
+/* ── Effort Progress ── */
+
+.effort-progress {
+  width: 100%;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--surface-overlay);
+  margin-top: 6px;
+  overflow: hidden;
+}
+
+.effort-progress-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 300ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.effort-progress-fill.below-cp {
+  background: var(--green);
+}
+
+.effort-progress-fill.at-cp {
+  background: var(--gold);
+}
+
+.effort-progress-fill.above-cp {
+  background: linear-gradient(90deg, var(--green), var(--gold) 80%, var(--red));
+}
+
+.effort-progress-bar {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--surface-overlay);
+  margin: 8px 0;
+  overflow: hidden;
+}
+
+.effort-progress-bar .effort-progress-fill {
+  background: linear-gradient(90deg, var(--green), var(--gold));
+}
+
+/* ── Above CP Warning ── */
+
+.warning-callout.above-cp {
+  border-color: var(--gold-dim);
+  background: var(--gold-dim);
+  color: var(--gold-strong);
+}
+
+.warning-callout.above-cp strong {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--gold);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.warning-callout.above-cp p {
+  margin: 0;
+  font-size: 0.82rem;
+}
+
+.warning-callout.above-cp span {
+  display: block;
+  margin-top: 6px;
+  color: var(--gold);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+/* ═══════════════════════════════════════════════════════════
    Responsive: Medium (<= 1120px)
    ═══════════════════════════════════════════════════════════ */
 
@@ -1224,6 +1556,11 @@ details[open] > summary .chevron {
 
   .metric-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .field-grid.two,
+  .readonly-grid.three {
+    grid-template-columns: 1fr;
   }
 
   .result-hero strong {

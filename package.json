@@ -6,6 +6,6 @@
   "type": "module",
   "scripts": {
     "serve": "python3 -m http.server 5173",
-    "check": "node scripts/check-prediction.js"
+    "check": "node scripts/check-prediction.js && node scripts/check-best-effort.js"
   }
 }
