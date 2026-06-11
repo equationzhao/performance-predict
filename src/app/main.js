@@ -344,6 +344,14 @@ function loadFromUrl() {
       state[full] = val;
     }
   }
+  const cp = Number(params.get("cp"));
+  const w = Number(params.get("w2"));
+  const pm = Number(params.get("pm"));
+  if (Number.isFinite(cp) && Number.isFinite(w) && Number.isFinite(pm)) {
+    powerModelData = { cp, wPrime: w, pMax: pm, fetchedAt: Date.now() };
+    savePowerModel(powerModelData);
+    connectionState = "connected";
+  }
   return Object.keys(state).length > 0 ? state : null;
 }
 
@@ -354,6 +362,11 @@ function syncUrl() {
     if (val != null && val !== "" && val !== DEFAULT_FORM_STATE[full]) {
       params.set(short, String(val));
     }
+  }
+  if (formState.powerMode === "best_effort" && powerModelData) {
+    params.set("cp", String(powerModelData.cp));
+    params.set("w2", String(powerModelData.wPrime));
+    params.set("pm", String(powerModelData.pMax));
   }
   const qs = params.toString();
   const url = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
