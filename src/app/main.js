@@ -973,15 +973,31 @@ function buildCpModel(data) {
   return { cp: data.cp, wPrime: data.wPrime, pMax: data.pMax };
 }
 
+function computeEffectiveCda(input) {
+  if (!input.drafting.enabled) {
+    return input.equipment.cda;
+  }
+  if (input.drafting.rotating) {
+    const positions = buildRotatingPositions(input.drafting.riders, input.drafting.workPct);
+    return positions.reduce(
+      (sum, pos) => sum + cyclingDraftDragReduction(input.drafting.riders, pos.position) * pos.pct * input.equipment.cda,
+      0,
+    );
+  }
+  const reduction = cyclingDraftDragReduction(input.drafting.riders, input.drafting.position);
+  return input.equipment.cda * reduction;
+}
+
 function renderBestEffortPrediction(input) {
   const cpModel = buildCpModel(powerModelData);
+  const effectiveCda = computeEffectiveCda(input);
   const solution = solveBestEffort({
     cpModel,
     distanceM: input.segment.distanceM,
     slopeRatio: input.segment.slopeRatio,
     weightKg: input.rider.bodyWeightKg + input.rider.gearWeightKg,
     crr: input.equipment.crr,
-    cda: input.equipment.cda,
+    cda: effectiveCda,
     elevationM: input.segment.elevationM,
     windMps: input.segment.windMps,
     drivetrainLoss: input.rider.drivetrainLoss,
