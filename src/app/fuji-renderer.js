@@ -1,5 +1,6 @@
 import { els } from "./dom.js";
 import { computeEffectiveCda } from "./drafting.js";
+import { closeFujiDetail, syncFujiDetailTier } from "./fuji-detail.js";
 import { evaluateAchievement } from "../lib/achievements.js";
 import { formatCompactNumber, formatNumber, formatTime } from "../lib/format.js";
 import { buildTargetPowerTable } from "../lib/target-power.js";
@@ -12,8 +13,10 @@ let lastFujiTier = null;
 
 function applyFujiTier(tier) {
   const card = els.fujiAchievementCard;
+  const motionLevel = getMotionLevel(tier);
   card.dataset.tier = tier;
-  card.dataset.motionLevel = String(getMotionLevel(tier));
+  card.dataset.motionLevel = String(motionLevel);
+  syncFujiDetailTier(tier, motionLevel);
 
   if (lastFujiTier && lastFujiTier !== tier) {
     card.classList.remove("rank-reveal");
@@ -25,6 +28,7 @@ function applyFujiTier(tier) {
 }
 
 export function hideFujiMode() {
+  closeFujiDetail({ immediate: true, restoreFocus: false });
   els.fujiEventCard.classList.add("hidden");
   els.fujiAchievementCard.classList.add("hidden");
   els.fujiRingLadder.classList.add("hidden");
@@ -36,6 +40,30 @@ function formatSignedPower(deltaW) {
   const rounded = Math.round(deltaW);
   if (rounded === 0) return "same as current";
   return `${rounded > 0 ? "+" : ""}${rounded} W`;
+}
+
+function setAchievementSummary({ kicker, title, gap, time }) {
+  els.fujiAchievementKicker.textContent = kicker;
+  els.fujiAchievementTitle.textContent = title;
+  els.fujiAchievementGap.textContent = gap;
+  els.fujiBigTime.textContent = time;
+  els.fujiAchievementCard.setAttribute("aria-label", `Open Fuji achievement details: ${title}, predicted time ${time}`);
+
+  els.fujiDetailAchievementKicker.textContent = kicker;
+  els.fujiDetailAchievementTitle.textContent = title;
+  els.fujiDetailAchievementGap.textContent = gap;
+  els.fujiDetailBigTime.textContent = time;
+}
+
+function setAchievementTarget({ hidden, power = "--", copy = "" }) {
+  els.fujiAchievementTarget.classList.toggle("hidden", hidden);
+  els.fujiDetailAchievementTarget.classList.toggle("hidden", hidden);
+  els.fujiDetailAchievementTarget.closest(".fuji-detail-time-card")?.classList.toggle("has-target", !hidden);
+
+  els.fujiTargetPower.textContent = power;
+  els.fujiTargetCopy.textContent = copy;
+  els.fujiDetailTargetPower.textContent = power;
+  els.fujiDetailTargetCopy.textContent = copy;
 }
 
 export function renderEventMode(input, result, event) {
@@ -77,38 +105,49 @@ function renderFujiAchievement(input, result, event) {
   const tier = evaluation.achieved?.id ?? "outside";
   applyFujiTier(tier);
 
-  els.fujiBigTime.textContent = formatTime(result.timeSec);
+  const predictedTime = formatTime(result.timeSec);
 
   if (evaluation.outsideCutoff) {
     const finishThreshold = event.achievements.find(a => a.id === "finish")?.thresholdSec;
-    els.fujiAchievementKicker.textContent = "Achievement";
-    els.fujiAchievementTitle.textContent = "Outside official finish cutoff";
-    els.fujiAchievementGap.textContent = finishThreshold
+    const gap = finishThreshold
       ? `Finish cutoff is ${formatTime(finishThreshold)}. Current prediction is ${formatTime(result.timeSec)}.`
       : "Prediction exceeds finish cutoff.";
-    els.fujiAchievementTarget.classList.add("hidden");
+    setAchievementSummary({
+      kicker: "Achievement",
+      title: "Outside official finish cutoff",
+      gap,
+      time: predictedTime,
+    });
+    setAchievementTarget({ hidden: true });
   } else if (!evaluation.next) {
     const rewardText = evaluation.achieved?.reward ? ` — ${evaluation.achieved.reward}` : "";
-    els.fujiAchievementKicker.textContent = tier === "sub55" ? "Record Challenge" : "Achievement";
-    els.fujiAchievementTitle.textContent = `${evaluation.achieved.label} achieved${rewardText}`;
-    els.fujiAchievementGap.textContent = "Top target — no higher goal.";
-    els.fujiAchievementTarget.classList.add("hidden");
+    setAchievementSummary({
+      kicker: "Achievement",
+      title: `${evaluation.achieved.label} achieved${rewardText}`,
+      gap: "Top target — no higher goal.",
+      time: predictedTime,
+    });
+    setAchievementTarget({ hidden: true });
   } else {
-    els.fujiAchievementKicker.textContent = tier === "sub55" ? "Record Challenge" : "Achievement";
-    els.fujiAchievementTitle.textContent =
-      `${evaluation.achieved?.label ?? "No ring"} predicted`;
-    els.fujiAchievementGap.textContent =
-      `${evaluation.next.label} is ${formatTime(evaluation.gapToNextSec)} away`;
+    setAchievementSummary({
+      kicker: "Achievement",
+      title: `${evaluation.achieved?.label ?? "No ring"} predicted`,
+      gap: `${evaluation.next.label} is ${formatTime(evaluation.gapToNextSec)} away`,
+      time: predictedTime,
+    });
 
-    els.fujiAchievementTarget.classList.remove("hidden");
     if (nextRow?.requiredPowerW != null) {
-      els.fujiTargetPower.textContent =
-        `${evaluation.next.shortLabel} needs ${formatCompactNumber(nextRow.requiredPowerW, 0)} W / ${formatNumber(nextRow.requiredWkg, 2)} W/kg`;
-      els.fujiTargetCopy.textContent =
-        `${formatSignedPower(nextRow.deltaPowerW)} from current target`;
+      setAchievementTarget({
+        hidden: false,
+        power: `${evaluation.next.shortLabel} needs ${formatCompactNumber(nextRow.requiredPowerW, 0)} W / ${formatNumber(nextRow.requiredWkg, 2)} W/kg`,
+        copy: `${formatSignedPower(nextRow.deltaPowerW)} from current target`,
+      });
     } else {
-      els.fujiTargetPower.textContent = "--";
-      els.fujiTargetCopy.textContent = "No stable power solution under current inputs.";
+      setAchievementTarget({
+        hidden: false,
+        power: "--",
+        copy: "No stable power solution under current inputs.",
+      });
     }
   }
 }
@@ -126,7 +165,7 @@ function renderFujiRingLadder(input, result, event) {
     : 0;
   els.fujiLadderSummary.textContent = `${achievedCount}/${table.length} achieved`;
 
-  for (const row of table) {
+  table.forEach((row, index) => {
     const step = document.createElement("div");
     step.className = "ring-step";
 
@@ -141,6 +180,7 @@ function renderFujiRingLadder(input, result, event) {
     if (evaluation.outsideCutoff && row.id === "finish") step.classList.add("outside");
 
     step.style.setProperty("--ring-color", `var(${row.colorToken})`);
+    step.style.setProperty("--step-index", String(index));
 
     const powerText = row.requiredPowerW != null
       ? `${formatCompactNumber(row.requiredPowerW, 0)} W`
@@ -158,7 +198,7 @@ function renderFujiRingLadder(input, result, event) {
     `;
 
     els.fujiRingLadderList.appendChild(step);
-  }
+  });
 }
 
 function renderFujiCheckpoints(result, event) {
@@ -168,7 +208,7 @@ function renderFujiCheckpoints(result, event) {
   const velocityMps = result.velocityMps;
   if (!Number.isFinite(velocityMps) || velocityMps <= 0) return;
 
-  for (const cp of event.checkpoints) {
+  event.checkpoints.forEach((cp, index) => {
     const etaSec = (cp.distanceKm * 1000) / velocityMps;
     const isOverCutoff = cp.cutoffSec != null && etaSec > cp.cutoffSec;
 
@@ -181,6 +221,8 @@ function renderFujiCheckpoints(result, event) {
 
     const checkpoint = document.createElement("div");
     checkpoint.className = "checkpoint";
+    checkpoint.style.setProperty("--checkpoint-index", String(index));
+    if (cp.kind === "split") checkpoint.classList.add("checkpoint-split");
     checkpoint.innerHTML = `
       <div class="checkpoint-dot ${dotClass}"></div>
       <span class="checkpoint-label">${cp.label}</span>
@@ -191,7 +233,7 @@ function renderFujiCheckpoints(result, event) {
     `;
 
     els.fujiCheckpointStrip.appendChild(checkpoint);
-  }
+  });
 }
 
 export function buildMobileSummaryFuji(result, evaluation) {
@@ -204,4 +246,3 @@ export function buildMobileSummaryFuji(result, evaluation) {
   }
   return `${ring} · Top ring`;
 }
-

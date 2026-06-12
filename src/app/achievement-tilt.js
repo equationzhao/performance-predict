@@ -19,6 +19,30 @@ function attachTiltCard(card) {
   const coarsePointer = window.matchMedia("(pointer: coarse)").matches;
   if (reduceMotion || coarsePointer) return;
 
+  function resetTilt() {
+    if (frame) {
+      cancelAnimationFrame(frame);
+      frame = 0;
+    }
+
+    targetRx = 0;
+    targetRy = 0;
+    targetPx = 0;
+    targetPy = 0;
+    currentRx = 0;
+    currentRy = 0;
+    currentPx = 0;
+    currentPy = 0;
+
+    card.classList.remove("is-hovered");
+    card.style.setProperty("--rx", "0deg");
+    card.style.setProperty("--ry", "0deg");
+    card.style.setProperty("--px", "0px");
+    card.style.setProperty("--py", "0px");
+    card.style.setProperty("--mx", "50%");
+    card.style.setProperty("--my", "50%");
+  }
+
   function readTiltMax() {
     const raw = getComputedStyle(card).getPropertyValue("--tilt-max").trim();
     const parsed = Number.parseFloat(raw);
@@ -51,6 +75,11 @@ function attachTiltCard(card) {
   }
 
   card.addEventListener("pointermove", event => {
+    if (document.body.classList.contains("fuji-detail-open") || card.classList.contains("is-focus-source-hidden")) {
+      resetTilt();
+      return;
+    }
+
     const rect = card.getBoundingClientRect();
     const x = (event.clientX - rect.left) / rect.width;
     const y = (event.clientY - rect.top) / rect.height;
@@ -79,5 +108,6 @@ function attachTiltCard(card) {
     card.style.setProperty("--my", "50%");
     requestTick();
   });
-}
 
+  card.addEventListener("achievement:reset-tilt", resetTilt);
+}

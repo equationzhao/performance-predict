@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300..800;1,9..40,300..800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="./src/styles.css?v=4" />
+    <link rel="stylesheet" href="./src/styles.css?v=8" />
   </head>
   <body>
     <div class="app-shell">
@@ -391,20 +391,23 @@
               <span id="scenario-summary">--</span>
             </div>
 
-            <!-- Fuji HC Mode sections -->
-            <section class="fuji-event-card hidden" id="fuji-event-card">
-              <div class="fuji-card-header">
-                <span class="fuji-kicker">Mt. Fuji HC Mode</span>
-                <strong id="fuji-course-summary">--</strong>
-                <p id="fuji-course-detail">--</p>
-              </div>
-              <p class="source-confidence" id="fuji-source-confidence">--</p>
-            </section>
-
-            <section class="achievement-card achievement-card--interactive hidden" id="fuji-achievement-card" data-tier="silver" data-motion-level="4">
+            <!-- Fuji HC Mode entry point -->
+            <section
+              class="achievement-card achievement-card--interactive hidden"
+              id="fuji-achievement-card"
+              data-tier="silver"
+              data-motion-level="4"
+              role="button"
+              tabindex="0"
+              aria-haspopup="dialog"
+              aria-controls="fuji-detail-layer"
+              aria-expanded="false"
+              aria-label="Open Fuji achievement details"
+            >
               <div class="achievement-aura" aria-hidden="true"></div>
               <div class="achievement-glare" aria-hidden="true"></div>
               <div class="achievement-noise" aria-hidden="true"></div>
+              <span class="achievement-open-indicator" aria-hidden="true">Details</span>
 
               <div class="achievement-content">
                 <div class="achievement-ring-wrap">
@@ -486,24 +489,6 @@
               </dl>
             </section>
 
-            <section class="result-section fuji-ring-ladder hidden" id="fuji-ring-ladder">
-              <div class="section-title-row">
-                <h2>Fuji Ring Ladder</h2>
-                <span id="fuji-ladder-summary">--</span>
-              </div>
-              <div class="ring-ladder-list" id="fuji-ring-ladder-list"></div>
-              <p class="field-hint" id="fuji-ladder-hint">Required power uses your current weight, CdA, Crr, wind and drivetrain loss.</p>
-            </section>
-
-            <section class="result-section fuji-checkpoints hidden" id="fuji-checkpoints">
-              <div class="section-title-row">
-                <h2>Course Checkpoints</h2>
-                <span>average-speed ETA</span>
-              </div>
-              <div class="checkpoint-strip" id="fuji-checkpoint-strip"></div>
-              <p class="field-hint">Checkpoint ETA uses whole-segment average speed. Real course profile may vary.</p>
-            </section>
-
             <div class="warning-list" id="warning-list"></div>
 
             <section class="warning-callout above-cp hidden" id="above-cp-warning">
@@ -543,8 +528,84 @@
           </section>
         </aside>
       </main>
+
+      <div class="fuji-detail-layer hidden" id="fuji-detail-layer" aria-hidden="true">
+        <div class="fuji-detail-backdrop" id="fuji-detail-backdrop"></div>
+        <section
+          class="fuji-detail-card"
+          id="fuji-detail-card"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="fuji-detail-title"
+          tabindex="-1"
+          data-tier="silver"
+        >
+          <header class="fuji-detail-topbar">
+            <div>
+              <span class="fuji-detail-kicker">Mt. Fuji HC Mode</span>
+              <strong id="fuji-detail-title">Achievement Detail</strong>
+            </div>
+            <button class="fuji-detail-close" id="fuji-detail-close" type="button" aria-label="Close Fuji achievement details">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </header>
+
+          <div class="fuji-detail-body">
+            <div class="fuji-detail-column fuji-detail-column--lead">
+              <section class="fuji-detail-hero-card" id="fuji-detail-hero-card" data-tier="silver">
+                <div class="fuji-detail-ring-stack" aria-hidden="true">
+                  <div class="fuji-detail-ring-orb"></div>
+                </div>
+                <div class="fuji-detail-achievement-copy">
+                  <span class="achievement-kicker" id="fuji-detail-achievement-kicker">Achievement</span>
+                  <strong id="fuji-detail-achievement-title">--</strong>
+                  <p id="fuji-detail-achievement-gap">--</p>
+                </div>
+                <div class="fuji-detail-time-card">
+                  <span>Predicted Time</span>
+                  <strong id="fuji-detail-big-time">--</strong>
+                  <div class="target-box fuji-detail-target-box" id="fuji-detail-achievement-target">
+                    <span>Next Target</span>
+                    <strong id="fuji-detail-target-power">--</strong>
+                    <p id="fuji-detail-target-copy">--</p>
+                  </div>
+                </div>
+              </section>
+
+              <section class="fuji-event-card hidden" id="fuji-event-card">
+                <div class="fuji-card-header">
+                  <span class="fuji-kicker">Mt. Fuji HC Mode</span>
+                  <strong id="fuji-course-summary">--</strong>
+                  <p id="fuji-course-detail">--</p>
+                </div>
+                <p class="source-confidence" id="fuji-source-confidence">--</p>
+              </section>
+            </div>
+
+            <div class="fuji-detail-column">
+              <section class="result-section fuji-ring-ladder hidden" id="fuji-ring-ladder">
+                <div class="section-title-row">
+                  <h2>Fuji Ring Ladder</h2>
+                  <span id="fuji-ladder-summary">--</span>
+                </div>
+                <div class="ring-ladder-list" id="fuji-ring-ladder-list"></div>
+                <p class="field-hint" id="fuji-ladder-hint">Required power uses your current weight, CdA, Crr, wind and drivetrain loss.</p>
+              </section>
+
+              <section class="result-section fuji-checkpoints hidden" id="fuji-checkpoints">
+                <div class="section-title-row">
+                  <h2>Course Checkpoints</h2>
+                  <span>average-speed ETA</span>
+                </div>
+                <div class="checkpoint-strip" id="fuji-checkpoint-strip"></div>
+                <p class="field-hint">Checkpoint ETA uses whole-segment average speed. Real course profile may vary.</p>
+              </section>
+            </div>
+          </div>
+        </section>
+      </div>
     </div>
 
-    <script type="module" src="./src/app/main.js?v=2"></script>
+    <script type="module" src="./src/app/main.js?v=7"></script>
   </body>
 </html>

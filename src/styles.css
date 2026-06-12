@@ -114,6 +114,25 @@ button {
   cursor: pointer;
 }
 
+body.fuji-detail-open {
+  overflow: hidden;
+}
+
+body.fuji-detail-open .page-header,
+body.fuji-detail-open .mobile-summary,
+body.fuji-detail-open .predictor-layout > .input-panel,
+body.fuji-detail-open .result-state,
+body.fuji-detail-open .result-success > :not(.fuji-detail-layer) {
+  opacity: 0.72;
+  filter: blur(5px);
+  transform: scale(0.985);
+  transform-origin: center top;
+  transition:
+    opacity 320ms var(--ease-out-expo),
+    filter 320ms var(--ease-out-expo),
+    transform 320ms var(--ease-out-expo);
+}
+
 .hidden {
   display: none !important;
 }
@@ -1902,6 +1921,500 @@ details[open] > summary .chevron {
   margin: 0;
 }
 
+/* ── Fuji Detail Overlay ── */
+.fuji-detail-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  width: auto;
+  max-width: none;
+  padding: 24px;
+  pointer-events: none;
+  isolation: isolate;
+}
+
+.fuji-detail-layer.is-open,
+.fuji-detail-layer.is-opening,
+.fuji-detail-layer.is-closing {
+  pointer-events: auto;
+}
+
+.fuji-detail-backdrop {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 18%, rgba(125, 211, 252, 0.13), transparent 34%),
+    rgba(5, 8, 14, 0.72);
+  opacity: 0;
+  backdrop-filter: blur(0);
+  transition:
+    opacity 460ms var(--ease-out-expo),
+    backdrop-filter 460ms var(--ease-out-expo);
+}
+
+.fuji-detail-layer.is-opening .fuji-detail-backdrop,
+.fuji-detail-layer.is-open .fuji-detail-backdrop {
+  opacity: 1;
+  backdrop-filter: blur(8px);
+}
+
+.fuji-detail-layer.is-closing .fuji-detail-backdrop {
+  opacity: 0;
+  backdrop-filter: blur(0);
+  transition-duration: 260ms;
+}
+
+.fuji-detail-card {
+  position: relative;
+  z-index: 1;
+  width: min(980px, calc(100vw - 32px));
+  max-height: min(86vh, 820px);
+  border: 1px solid color-mix(in srgb, var(--tier-color) 40%, rgba(255, 255, 255, 0.08));
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at 18% 0%, var(--tier-bg), transparent 30%),
+    radial-gradient(circle at 85% 105%, rgba(125, 211, 252, 0.08), transparent 32%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.015)),
+    #101620;
+  box-shadow:
+    0 28px 90px rgba(0, 0, 0, 0.58),
+    0 0 54px var(--tier-glow);
+  overflow: hidden;
+  opacity: 0;
+  transform-origin: top left;
+  transition:
+    left 560ms cubic-bezier(0.16, 1, 0.3, 1),
+    top 560ms cubic-bezier(0.16, 1, 0.3, 1),
+    width 560ms cubic-bezier(0.16, 1, 0.3, 1),
+    height 560ms cubic-bezier(0.16, 1, 0.3, 1),
+    max-height 560ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 420ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-radius 560ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 260ms ease,
+    box-shadow 260ms ease;
+  will-change: left, top, width, height, max-height, opacity, border-radius;
+}
+
+.fuji-detail-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--tier-color), var(--tier-color-2), transparent);
+  opacity: 0.8;
+}
+
+.fuji-detail-layer.is-open .fuji-detail-card {
+  opacity: 1;
+}
+
+.fuji-detail-layer.is-closing .fuji-detail-card {
+  transition-duration: 460ms, 460ms, 460ms, 460ms, 460ms, 280ms, 460ms, 180ms, 180ms;
+}
+
+.fuji-shared-transition-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+}
+
+.fuji-shared-ghost {
+  box-sizing: border-box;
+  contain: layout paint style;
+  overflow: hidden;
+  pointer-events: none;
+  transform: none !important;
+  transform-origin: top left;
+  will-change: left, top, width, height, font-size, border-radius;
+}
+
+.fuji-shared-ghost *,
+.fuji-shared-ghost::before,
+.fuji-shared-ghost::after {
+  pointer-events: none;
+}
+
+.fuji-shared-ghost--ring {
+  overflow: visible;
+}
+
+.fuji-shared-ghost--ring .achievement-ring-orb,
+.fuji-shared-ghost--ring .fuji-detail-ring-orb {
+  border-color: var(--tier-color);
+  box-shadow:
+    inset 0 0 34px rgba(255, 255, 255, 0.12),
+    0 0 44px var(--tier-glow),
+    0 0 12px var(--tier-color);
+}
+
+.fuji-shared-ghost--ring[data-tier="sub55"] .achievement-ring-orb,
+.fuji-shared-ghost--ring[data-tier="sub55"] .fuji-detail-ring-orb {
+  border-color: color-mix(in srgb, var(--tier-color) 82%, white 18%);
+  box-shadow:
+    inset 0 0 40px rgba(125, 211, 252, 0.25),
+    inset 0 0 16px rgba(246, 196, 83, 0.15),
+    0 0 52px rgba(246, 196, 83, 0.35),
+    0 0 100px rgba(125, 211, 252, 0.2);
+}
+
+.fuji-shared-ghost--ring[data-tier="platinum"] .achievement-ring-orb,
+.fuji-shared-ghost--ring[data-tier="platinum"] .fuji-detail-ring-orb {
+  border-color: color-mix(in srgb, var(--tier-color) 86%, white 14%);
+  box-shadow:
+    inset 0 0 34px rgba(167, 139, 250, 0.2),
+    inset 0 0 12px rgba(103, 232, 249, 0.15),
+    0 0 44px rgba(103, 232, 249, 0.25),
+    0 0 80px rgba(167, 139, 250, 0.15);
+}
+
+.fuji-shared-ghost--kicker,
+.fuji-shared-ghost--title,
+.fuji-shared-ghost--gap,
+.fuji-shared-ghost--time {
+  display: block;
+}
+
+.fuji-shared-ghost--time {
+  white-space: nowrap;
+}
+
+.fuji-shared-ghost--target {
+  display: block;
+}
+
+.fuji-detail-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 64px;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(9, 17, 31, 0.72);
+}
+
+.fuji-detail-topbar div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.fuji-detail-kicker {
+  color: var(--tier-color);
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+#fuji-detail-title {
+  color: var(--text);
+  font-size: 1rem;
+  line-height: 1.15;
+}
+
+.fuji-detail-close {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  font-size: 1.35rem;
+  line-height: 1;
+  transition:
+    border-color 180ms ease,
+    background-color 180ms ease,
+    color 180ms ease,
+    transform 180ms ease;
+}
+
+.fuji-detail-close:hover,
+.fuji-detail-close:focus-visible {
+  border-color: var(--tier-color);
+  background: var(--tier-bg);
+  color: var(--tier-color);
+}
+
+.fuji-detail-close:active {
+  transform: scale(0.94);
+}
+
+.fuji-detail-layer.is-closing .fuji-detail-topbar {
+  opacity: 0.72;
+  transform: none;
+  transition:
+    opacity 360ms ease,
+    transform 460ms var(--ease-out-expo);
+}
+
+.fuji-detail-body {
+  display: grid;
+  grid-template-columns: minmax(300px, 0.88fr) minmax(360px, 1.12fr);
+  gap: 12px;
+  max-height: calc(min(86vh, 820px) - 65px);
+  padding: 14px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  transform-origin: center top;
+  transition:
+    opacity 240ms ease,
+    transform 280ms var(--ease-out-expo);
+}
+
+.fuji-detail-layer.is-closing .fuji-detail-body {
+  opacity: 0.84;
+  transform: scale(0.992);
+}
+
+.fuji-detail-column {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  min-width: 0;
+}
+
+.fuji-detail-hero-card,
+.fuji-detail-card .fuji-event-card,
+.fuji-detail-card .result-section {
+  border-radius: 8px;
+}
+
+.fuji-detail-card .fuji-event-card {
+  margin: 0;
+  animation: none;
+  background:
+    radial-gradient(circle at 84% 0%, var(--fuji-ice), transparent 36%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.012));
+}
+
+.fuji-detail-card .result-section {
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.012)),
+    var(--surface-raised);
+}
+
+.fuji-detail-card .fuji-event-card,
+.fuji-detail-card .fuji-ring-ladder,
+.fuji-detail-card .fuji-checkpoints {
+  opacity: 0;
+  transform: translateY(14px);
+  transition:
+    opacity 260ms ease,
+    transform 360ms var(--ease-out-expo);
+}
+
+.fuji-detail-layer.is-open .fuji-detail-card .fuji-event-card {
+  opacity: 1;
+  transform: translateY(0);
+  transition-delay: 180ms;
+}
+
+.fuji-detail-layer.is-open .fuji-detail-card .fuji-ring-ladder {
+  opacity: 1;
+  transform: translateY(0);
+  transition-delay: 210ms;
+}
+
+.fuji-detail-layer.is-open .fuji-detail-card .fuji-checkpoints {
+  opacity: 1;
+  transform: translateY(0);
+  transition-delay: 310ms;
+}
+
+.fuji-detail-layer.is-closing .fuji-detail-card .fuji-event-card,
+.fuji-detail-layer.is-closing .fuji-detail-card .fuji-ring-ladder,
+.fuji-detail-layer.is-closing .fuji-detail-card .fuji-checkpoints {
+  opacity: 1;
+  transform: translateY(0);
+  transition-delay: 0ms;
+  transition-duration: 0ms;
+}
+
+.fuji-detail-layer.is-closing .fuji-detail-card .ring-step,
+.fuji-detail-layer.is-closing .fuji-detail-card .checkpoint {
+  opacity: 1;
+  transform: none;
+  animation: none;
+}
+
+.fuji-detail-layer.is-closing .checkpoint-strip::before {
+  transform: scaleX(1);
+  animation: none;
+}
+
+.fuji-detail-hero-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 16px;
+  align-items: center;
+  padding: 16px;
+  border: 1px solid color-mix(in srgb, var(--tier-color) 34%, rgba(255, 255, 255, 0.1));
+  background:
+    radial-gradient(circle at 0% 0%, var(--tier-bg), transparent 38%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.016)),
+    rgba(0, 0, 0, 0.18);
+  overflow: hidden;
+}
+
+.fuji-detail-hero-card::after {
+  content: "";
+  position: absolute;
+  inset: auto 18px 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--tier-color), transparent);
+  opacity: 0.54;
+}
+
+.fuji-detail-ring-stack {
+  position: relative;
+  width: 84px;
+  height: 84px;
+  align-self: start;
+}
+
+.fuji-detail-ring-stack::before {
+  content: "";
+  position: absolute;
+  inset: -10px;
+  border-radius: 999px;
+  background: conic-gradient(from 0deg, transparent, var(--tier-color), transparent, var(--tier-color-2), transparent);
+  opacity: 0.38;
+  filter: blur(1px);
+  animation: aura-spin var(--aura-speed) linear infinite;
+}
+
+.fuji-detail-ring-stack::after {
+  content: "";
+  position: absolute;
+  inset: -18px;
+  border-radius: 999px;
+  border: 1px solid var(--tier-color);
+  opacity: 0;
+  transform: scale(0.78);
+  pointer-events: none;
+}
+
+.fuji-detail-layer.is-open .fuji-detail-card[data-motion-level="6"] .fuji-detail-ring-stack::after,
+.fuji-detail-layer.is-open .fuji-detail-card[data-motion-level="7"] .fuji-detail-ring-stack::after {
+  animation: fuji-detail-burst 680ms ease-out 420ms both;
+}
+
+.fuji-detail-ring-orb {
+  position: absolute;
+  inset: 8px;
+  border: 12px solid var(--tier-color);
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.10), transparent 58%), #10151f;
+  box-shadow:
+    inset 0 0 24px rgba(255, 255, 255, 0.10),
+    0 0 34px var(--tier-glow);
+  animation: ring-breathe 2.6s ease-in-out infinite;
+}
+
+.fuji-detail-achievement-copy {
+  min-width: 0;
+}
+
+.fuji-detail-achievement-copy strong {
+  display: block;
+  color: var(--tier-color);
+  font-size: clamp(1.55rem, 3.35vw, 2.45rem);
+  font-weight: 850;
+  line-height: 0.95;
+  overflow-wrap: anywhere;
+  text-shadow: 0 0 28px var(--tier-glow);
+}
+
+.fuji-detail-achievement-copy p {
+  margin: 12px 0 0;
+  color: #cbd5e1;
+  font-size: 1rem;
+  overflow-wrap: anywhere;
+}
+
+.fuji-detail-time-card {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  min-width: 0;
+}
+
+.fuji-detail-time-card > span,
+.fuji-detail-time-card > strong {
+  min-width: 0;
+}
+
+.fuji-detail-time-card > span {
+  grid-column: 1;
+  align-self: end;
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.fuji-detail-time-card > strong {
+  grid-column: 1;
+  margin-top: -6px;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: clamp(2.35rem, 5.4vw, 4.5rem);
+  line-height: 0.86;
+  letter-spacing: -0.04em;
+  max-width: 100%;
+  overflow-wrap: normal;
+  white-space: nowrap;
+  text-shadow: 0 0 40px var(--tier-glow);
+}
+
+.fuji-detail-target-box {
+  grid-column: 1;
+  grid-row: auto;
+  width: 100%;
+  min-width: 0;
+  border-radius: 8px;
+  align-self: end;
+}
+
+.fuji-detail-card[data-tier="sub55"] .achievement-kicker::after {
+  content: " · RECORD CHALLENGE";
+  font-size: 0.55rem;
+  color: var(--tier-color-2);
+}
+
+.fuji-detail-card[data-tier="sub55"] .fuji-detail-ring-orb,
+.fuji-detail-card[data-tier="platinum"] .fuji-detail-ring-orb {
+  border-color: color-mix(in srgb, var(--tier-color) 80%, white 20%);
+  box-shadow:
+    inset 0 0 32px color-mix(in srgb, var(--tier-glow) 70%, transparent),
+    0 0 42px var(--tier-glow),
+    0 0 84px color-mix(in srgb, var(--tier-color-2) 18%, transparent);
+}
+
+.fuji-detail-card[data-tier="sub55"] .fuji-detail-achievement-copy strong,
+.fuji-detail-card[data-tier="platinum"] .fuji-detail-achievement-copy strong {
+  background: linear-gradient(90deg, var(--tier-color), var(--tier-color-2), var(--tier-color), var(--tier-color-2));
+  background-size: 280% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: platinum-text-holo 5s linear infinite;
+}
+
 /* ── Achievement Card ── */
 /* ═══════════════════════════════════════════════════════════
    Achievement Card — Motion Enhanced
@@ -1933,6 +2446,7 @@ details[open] > summary .chevron {
   max-width: 100%;
   min-width: 0;
   overflow: hidden;
+  opacity: 1;
   isolation: isolate;
   border-radius: 22px;
   padding: 24px;
@@ -1955,13 +2469,65 @@ details[open] > summary .chevron {
   animation: fuji-card-in 280ms ease-out forwards;
 }
 
+.achievement-card--interactive {
+  cursor: pointer;
+  user-select: none;
+}
+
+.achievement-card.is-focus-source-hidden {
+  opacity: 0 !important;
+  pointer-events: none;
+  transform:
+    perspective(900px)
+    rotateX(0deg)
+    rotateY(0deg)
+    scale(1);
+  transition:
+    opacity 130ms ease,
+    transform 130ms ease;
+}
+
+.achievement-card--interactive:focus-visible {
+  outline: 0;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, .34), 0 0 0 3px var(--tier-glow), 0 0 0 1px var(--tier-color);
+}
+
+.achievement-open-indicator {
+  position: absolute;
+  top: 13px;
+  right: 14px;
+  z-index: 5;
+  padding: 4px 8px;
+  border: 1px solid color-mix(in srgb, var(--tier-color) 42%, rgba(255, 255, 255, 0.12));
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.22);
+  color: var(--tier-color);
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    transform 180ms ease;
+}
+
+.achievement-card--interactive:hover .achievement-open-indicator,
+.achievement-card--interactive:focus-visible .achievement-open-indicator {
+  border-color: var(--tier-color);
+  background: var(--tier-bg);
+  transform: translateY(-1px);
+}
+
 .achievement-card.is-hovered {
   --card-scale: var(--scale-hover);
   border-color: color-mix(in srgb, var(--tier-color) 72%, white 12%);
 }
 
 /* ── Tier Variables ── */
-.achievement-card[data-tier="outside"] {
+.achievement-card[data-tier="outside"],
+.fuji-detail-card[data-tier="outside"] {
   --tier-color: var(--red);
   --tier-color-2: #fb923c;
   --tier-bg: rgba(248, 113, 113, .10);
@@ -1971,7 +2537,8 @@ details[open] > summary .chevron {
   --shine-speed: 14s;
 }
 
-.achievement-card[data-tier="finish"] {
+.achievement-card[data-tier="finish"],
+.fuji-detail-card[data-tier="finish"] {
   --tier-color: #34d399;
   --tier-color-2: #86efac;
   --tier-bg: rgba(52, 211, 153, .10);
@@ -1981,7 +2548,8 @@ details[open] > summary .chevron {
   --shine-speed: 10s;
 }
 
-.achievement-card[data-tier="blue"] {
+.achievement-card[data-tier="blue"],
+.fuji-detail-card[data-tier="blue"] {
   --tier-color: #60a5fa;
   --tier-color-2: #7dd3fc;
   --tier-bg: rgba(96, 165, 250, .11);
@@ -1991,7 +2559,8 @@ details[open] > summary .chevron {
   --shine-speed: 9s;
 }
 
-.achievement-card[data-tier="bronze"] {
+.achievement-card[data-tier="bronze"],
+.fuji-detail-card[data-tier="bronze"] {
   --tier-color: #c08457;
   --tier-color-2: #f59e0b;
   --tier-bg: rgba(192, 132, 87, .12);
@@ -2001,7 +2570,8 @@ details[open] > summary .chevron {
   --shine-speed: 7.5s;
 }
 
-.achievement-card[data-tier="silver"] {
+.achievement-card[data-tier="silver"],
+.fuji-detail-card[data-tier="silver"] {
   --tier-color: #cbd5e1;
   --tier-color-2: #7dd3fc;
   --tier-bg: rgba(203, 213, 225, .14);
@@ -2011,7 +2581,8 @@ details[open] > summary .chevron {
   --shine-speed: 6s;
 }
 
-.achievement-card[data-tier="gold"] {
+.achievement-card[data-tier="gold"],
+.fuji-detail-card[data-tier="gold"] {
   --tier-color: #f6c453;
   --tier-color-2: #f97316;
   --tier-bg: rgba(246, 196, 83, .16);
@@ -2022,7 +2593,8 @@ details[open] > summary .chevron {
   --scale-hover: 1.026;
 }
 
-.achievement-card[data-tier="platinum"] {
+.achievement-card[data-tier="platinum"],
+.fuji-detail-card[data-tier="platinum"] {
   --tier-color: #f8fafc;
   --tier-color-2: #a78bfa;
   --tier-color-3: #67e8f9;
@@ -2034,7 +2606,8 @@ details[open] > summary .chevron {
   --scale-hover: 1.03;
 }
 
-.achievement-card[data-tier="sub55"] {
+.achievement-card[data-tier="sub55"],
+.fuji-detail-card[data-tier="sub55"] {
   --tier-color: #7dd3fc;
   --tier-color-2: #f6c453;
   --tier-color-3: #f0abfc;
@@ -2510,6 +3083,39 @@ details[open] > summary .chevron {
   100% { transform: perspective(900px) rotateX(var(--rx)) rotateY(var(--ry)) scale(var(--card-scale)); filter: saturate(1) brightness(1); }
 }
 
+@keyframes fuji-detail-burst {
+  0% { opacity: 0.58; transform: scale(0.72); }
+  100% { opacity: 0; transform: scale(1.62); }
+}
+
+@keyframes ladder-step-enter {
+  from { opacity: 0; transform: translateX(16px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes current-ring-breathe {
+  0%, 100% {
+    box-shadow:
+      0 0 0 1px rgba(52, 211, 153, 0.16),
+      0 0 0 rgba(52, 211, 153, 0);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px rgba(52, 211, 153, 0.34),
+      0 0 18px rgba(52, 211, 153, 0.16);
+  }
+}
+
+@keyframes checkpoint-line-enter {
+  from { transform: scaleX(0); opacity: 0.45; }
+  to { transform: scaleX(1); opacity: 1; }
+}
+
+@keyframes checkpoint-node-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 /* ── Ring Ladder ── */
 .ring-ladder-list {
   display: grid;
@@ -2528,6 +3134,16 @@ details[open] > summary .chevron {
   border-radius: var(--radius-sm);
   background: var(--surface-input);
   font-size: 0.82rem;
+}
+
+.fuji-detail-card .ring-step {
+  opacity: 0;
+  transform: translateX(16px);
+}
+
+.fuji-detail-layer.is-open .fuji-detail-card .ring-step {
+  animation: ladder-step-enter 280ms var(--ease-out-expo) both;
+  animation-delay: calc(250ms + var(--step-index, 0) * 42ms);
 }
 
 .ring-step .ring-label {
@@ -2589,6 +3205,16 @@ details[open] > summary .chevron {
   box-shadow: 0 0 0 1px var(--ring-glow, var(--cyan-glow));
 }
 
+.ring-step.current {
+  border-color: color-mix(in srgb, var(--ring-color, var(--green)) 46%, var(--border));
+}
+
+.fuji-detail-layer.is-open .ring-step.current {
+  animation:
+    ladder-step-enter 280ms var(--ease-out-expo) both,
+    current-ring-breathe 2200ms ease-in-out calc(520ms + var(--step-index, 0) * 42ms) infinite;
+}
+
 .ring-step.next::after {
   content: "";
   position: absolute;
@@ -2621,6 +3247,12 @@ details[open] > summary .chevron {
   right: 4px;
   height: 2px;
   background: var(--border);
+  transform: scaleX(0);
+  transform-origin: left center;
+}
+
+.fuji-detail-layer.is-open .checkpoint-strip::before {
+  animation: checkpoint-line-enter 420ms ease-out 360ms both;
 }
 
 .checkpoint {
@@ -2631,6 +3263,20 @@ details[open] > summary .chevron {
   position: relative;
   flex: 1;
   min-width: 0;
+}
+
+.fuji-detail-card .checkpoint {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.fuji-detail-layer.is-open .fuji-detail-card .checkpoint {
+  animation: checkpoint-node-enter 260ms var(--ease-out-expo) both;
+  animation-delay: calc(440ms + var(--checkpoint-index, 0) * 70ms);
+}
+
+.checkpoint.checkpoint-split .checkpoint-dot {
+  box-shadow: 0 0 16px var(--electric-dim);
 }
 
 .checkpoint-dot {
@@ -2751,6 +3397,49 @@ details[open] > summary .chevron {
 
 /* ── Mobile ── */
 @media (max-width: 760px) {
+  .fuji-detail-layer {
+    padding: 10px;
+  }
+
+  .fuji-detail-layer.is-open .fuji-detail-backdrop {
+    backdrop-filter: blur(3px);
+  }
+
+  .fuji-detail-card {
+    width: calc(100vw - 20px);
+    max-height: 92vh;
+  }
+
+  .fuji-detail-topbar {
+    min-height: 58px;
+    padding: 12px;
+  }
+
+  .fuji-detail-body {
+    grid-template-columns: 1fr;
+    max-height: calc(92vh - 59px);
+    padding: 10px;
+  }
+
+  .fuji-detail-hero-card {
+    grid-template-columns: 1fr;
+    padding: 15px;
+  }
+
+  .fuji-detail-ring-stack {
+    width: 76px;
+    height: 76px;
+  }
+
+  .fuji-detail-time-card {
+    grid-template-columns: 1fr;
+  }
+
+  .fuji-detail-target-box {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
   .ring-ladder-list {
     display: flex;
     overflow-x: auto;
@@ -2821,6 +3510,11 @@ details[open] > summary .chevron {
   .bar-segment,
   .fuji-event-card,
   .fuji-warning,
+  .fuji-detail-backdrop,
+  .fuji-detail-card,
+  .fuji-detail-ring-stack::before,
+  .fuji-detail-ring-stack::after,
+  .fuji-detail-ring-orb,
   .achievement-card,
   .achievement-card::after,
   .achievement-aura,
@@ -2828,12 +3522,41 @@ details[open] > summary .chevron {
   .achievement-card *,
   .ring-step,
   .ring-step::after,
-  .ring-step * {
+  .ring-step *,
+  .checkpoint-strip::before,
+  .checkpoint,
+  .checkpoint * {
     animation: none !important;
     transition-duration: 0.01ms !important;
   }
 
   .achievement-card {
+    transform: none !important;
+  }
+
+  .fuji-detail-card {
+    transform: none !important;
+  }
+
+  .fuji-detail-card .fuji-event-card,
+  .fuji-detail-card .fuji-ring-ladder,
+  .fuji-detail-card .fuji-checkpoints,
+  .fuji-detail-card .ring-step,
+  .fuji-detail-card .checkpoint {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .checkpoint-strip::before {
+    transform: scaleX(1) !important;
+  }
+
+  body.fuji-detail-open .page-header,
+  body.fuji-detail-open .mobile-summary,
+  body.fuji-detail-open .predictor-layout > .input-panel,
+  body.fuji-detail-open .result-state,
+  body.fuji-detail-open .result-success > :not(.fuji-detail-layer) {
+    filter: none !important;
     transform: none !important;
   }
 
