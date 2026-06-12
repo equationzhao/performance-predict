@@ -1,3 +1,5 @@
+import { normalizePowerModel } from "./power-model.js";
+
 const CREDENTIALS_KEY = "segment-performance-predictor-intervals-credentials-v1";
 const POWER_MODEL_KEY = "segment-performance-predictor-intervals-power-model-v1";
 
@@ -41,7 +43,11 @@ export function maskApiKey(apiKey) {
 /* ── Power model cache ── */
 
 export function savePowerModel(model) {
-  localStorage.setItem(POWER_MODEL_KEY, JSON.stringify(model));
+  const normalized = normalizePowerModel(model);
+  if (!normalized) {
+    return;
+  }
+  localStorage.setItem(POWER_MODEL_KEY, JSON.stringify({ ...model, ...normalized }));
 }
 
 export function loadPowerModel() {
@@ -49,10 +55,8 @@ export function loadPowerModel() {
     const raw = localStorage.getItem(POWER_MODEL_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
-    if (parsed && typeof parsed.cp === "number" && typeof parsed.wPrime === "number" && typeof parsed.pMax === "number") {
-      return parsed;
-    }
-    return null;
+    const normalized = normalizePowerModel(parsed);
+    return normalized ? { ...parsed, ...normalized } : null;
   } catch {
     return null;
   }
@@ -102,9 +106,10 @@ export async function fetchPowerModel({ athleteId, apiKey }) {
   const wPrime = data?.wPrime;
   const pMax = data?.pMax;
 
-  if (!Number.isFinite(cp) || !Number.isFinite(wPrime) || !Number.isFinite(pMax)) {
+  const model = normalizePowerModel({ cp, wPrime, pMax });
+  if (!model) {
     throw new Error("Power model data incomplete. Ensure you have enough ride data with a power meter.");
   }
 
-  return { cp, wPrime, pMax };
+  return model;
 }

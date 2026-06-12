@@ -1,4 +1,4 @@
-import { cpModel2Param, cpModel3Param, estimateTau, getPowerForDuration } from "../src/lib/power-model.js";
+import { cpModel2Param, getPowerForDuration, isValidPowerModel, normalizePowerModel } from "../src/lib/power-model.js";
 import { solveBestEffort } from "../src/lib/best-effort.js";
 import { validateForm } from "../src/lib/validation.js";
 
@@ -16,7 +16,6 @@ function assertRange(value, min, max, label) {
 
 console.log("Testing CP model functions...");
 
-// 2-param model
 const model2 = { cp: 300, wPrime: 20000, pMax: 800 };
 const p2_60 = cpModel2Param(model2, 60);
 assertRange(p2_60, 630, 640, "2P power at 60s");
@@ -25,23 +24,15 @@ assertRange(p2_300, 365, 370, "2P power at 300s");
 const p2_3600 = cpModel2Param(model2, 3600);
 assertRange(p2_3600, 305, 306, "2P power at 3600s");
 
-// 3-param model
-const tau = estimateTau(300, 20000, 800);
-assert(tau != null && tau > 0, "tau should be positive");
-const model3 = { cp: 300, wPrime: 20000, pMax: 800, tau };
-const p3_60 = cpModel3Param(model3, 60);
-assert(p3_60 > 300, "3P power at 60s should exceed CP");
-const p3_3600 = cpModel3Param(model3, 3600);
-assertRange(p3_3600, 300, 310, "3P power at 3600s");
+const p2_1 = cpModel2Param(model2, 1);
+assertRange(p2_1, 800, 800, "2P power at 1s capped by Pmax");
 
-// Dispatcher
-const pDispatch = getPowerForDuration(model3, 300);
-assert(pDispatch > 300, "dispatcher power should exceed CP");
+const pDispatch = getPowerForDuration(model2, 300);
+assertRange(pDispatch, 365, 370, "dispatcher uses 2P model");
 
-// No tau → 2-param fallback
-const modelNoTau = { cp: 300, wPrime: 20000, pMax: 800 };
-const pFallback = getPowerForDuration(modelNoTau, 300);
-assertRange(pFallback, 365, 370, "fallback to 2P");
+assert(isValidPowerModel(model2), "valid CP model should pass validation");
+assert(!isValidPowerModel({ cp: 300, wPrime: 20000, pMax: 250 }), "pMax must exceed CP");
+assert(normalizePowerModel(model2)?.cp === 300, "normalizer should preserve valid model");
 
 console.log("  CP model tests passed");
 
@@ -51,7 +42,7 @@ console.log("Testing best effort solver...");
 
 // Test 1: Classic climb
 const result1 = solveBestEffort({
-  cpModel: { cp: 300, wPrime: 20000, pMax: 800, tau: estimateTau(300, 20000, 800) },
+  cpModel: { cp: 300, wPrime: 20000, pMax: 800 },
   distanceM: 5000,
   slopeRatio: 0.08,
   weightKg: 82,
@@ -70,7 +61,7 @@ console.log(`  Classic climb: ${Math.round(result1.timeSec)}s, ${Math.round(resu
 
 // Test 2: Short segment
 const result2 = solveBestEffort({
-  cpModel: { cp: 280, wPrime: 15000, pMax: 750, tau: estimateTau(280, 15000, 750) },
+  cpModel: { cp: 280, wPrime: 15000, pMax: 750 },
   distanceM: 1000,
   slopeRatio: 0.05,
   weightKg: 75,
@@ -83,11 +74,12 @@ const result2 = solveBestEffort({
 assert(result2 != null, "short result should exist");
 assertRange(result2.timeSec, 60, 300, "short segment time (1-5 min)");
 assert(result2.powerW > 280, "short effort should exceed CP");
+assert(result2.powerW <= 750, "short effort should be capped by Pmax");
 console.log(`  Short segment: ${Math.round(result2.timeSec)}s, ${Math.round(result2.powerW)}W, ${result2.iterations} iters`);
 
 // Test 3: Flat TT
 const result3 = solveBestEffort({
-  cpModel: { cp: 300, wPrime: 18000, pMax: 800, tau: estimateTau(300, 18000, 800) },
+  cpModel: { cp: 300, wPrime: 18000, pMax: 800 },
   distanceM: 10000,
   slopeRatio: 0,
   weightKg: 80,

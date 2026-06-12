@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300..800;1,9..40,300..800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="./src/styles.css?v=2" />
+    <link rel="stylesheet" href="./src/styles.css?v=4" />
   </head>
   <body>
     <div class="app-shell">
@@ -124,21 +124,21 @@
                 <label class="field" for="pm-cp-input">
                   <span class="field-label">CP</span>
                   <span class="input-with-unit">
-                    <input id="pm-cp-input" type="text" inputmode="decimal" autocomplete="off" data-field="pmCp" />
+	                    <input id="pm-cp-input" type="text" inputmode="decimal" autocomplete="off" data-field="pmCp" title="Critical Power in watts" />
                     <span class="unit">W</span>
                   </span>
                 </label>
                 <label class="field" for="pm-wprime-input">
                   <span class="field-label">W'</span>
                   <span class="input-with-unit">
-                    <input id="pm-wprime-input" type="text" inputmode="decimal" autocomplete="off" data-field="pmWprime" />
+	                    <input id="pm-wprime-input" type="text" inputmode="decimal" autocomplete="off" data-field="pmWprime" title="W' capacity in joules" />
                     <span class="unit">J</span>
                   </span>
                 </label>
                 <label class="field" for="pm-pmax-input">
                   <span class="field-label">Pmax</span>
                   <span class="input-with-unit">
-                    <input id="pm-pmax-input" type="text" inputmode="decimal" autocomplete="off" data-field="pmPmax" />
+	                    <input id="pm-pmax-input" type="text" inputmode="decimal" autocomplete="off" data-field="pmPmax" title="Short-duration power ceiling in watts" />
                     <span class="unit">W</span>
                   </span>
                 </label>
@@ -209,7 +209,7 @@
             </div>
 
             <div id="best-effort-info" class="hidden">
-              <p class="best-effort-description">Required power determined by your CP model based on segment duration. Adjust segment params to see how predicted power and time change together.</p>
+              <p class="best-effort-description">Best Effort uses a 2-parameter CP model: P(t) = CP + W' / t, capped by Pmax for very short efforts.</p>
             </div>
 
             <div class="readonly-grid">
@@ -391,6 +391,46 @@
               <span id="scenario-summary">--</span>
             </div>
 
+            <!-- Fuji HC Mode sections -->
+            <section class="fuji-event-card hidden" id="fuji-event-card">
+              <div class="fuji-card-header">
+                <span class="fuji-kicker">Mt. Fuji HC Mode</span>
+                <strong id="fuji-course-summary">--</strong>
+                <p id="fuji-course-detail">--</p>
+              </div>
+              <p class="source-confidence" id="fuji-source-confidence">--</p>
+            </section>
+
+            <section class="achievement-card achievement-card--interactive hidden" id="fuji-achievement-card" data-tier="silver" data-motion-level="4">
+              <div class="achievement-aura" aria-hidden="true"></div>
+              <div class="achievement-glare" aria-hidden="true"></div>
+              <div class="achievement-noise" aria-hidden="true"></div>
+
+              <div class="achievement-content">
+                <div class="achievement-ring-wrap">
+                  <div class="achievement-ring-orb" id="fuji-ring-orb" aria-hidden="true"></div>
+                  <div class="achievement-particles" aria-hidden="true">
+                    <i></i><i></i><i></i><i></i><i></i><i></i>
+                  </div>
+                </div>
+
+                <div class="achievement-copy">
+                  <span class="achievement-kicker" id="fuji-achievement-kicker">Achievement</span>
+                  <strong id="fuji-achievement-title">--</strong>
+                  <p id="fuji-achievement-gap">--</p>
+                </div>
+
+                <div class="achievement-time">
+                  <p class="big-time" id="fuji-big-time">--</p>
+                  <div class="target-box" id="fuji-achievement-target">
+                    <span>Next Target</span>
+                    <strong id="fuji-target-power">--</strong>
+                    <p id="fuji-target-copy">--</p>
+                  </div>
+                </div>
+              </div>
+            </section>
+
             <div class="metric-grid">
               <div class="metric-tile">
                 <span>Average Speed</span>
@@ -446,6 +486,24 @@
               </dl>
             </section>
 
+            <section class="result-section fuji-ring-ladder hidden" id="fuji-ring-ladder">
+              <div class="section-title-row">
+                <h2>Fuji Ring Ladder</h2>
+                <span id="fuji-ladder-summary">--</span>
+              </div>
+              <div class="ring-ladder-list" id="fuji-ring-ladder-list"></div>
+              <p class="field-hint" id="fuji-ladder-hint">Required power uses your current weight, CdA, Crr, wind and drivetrain loss.</p>
+            </section>
+
+            <section class="result-section fuji-checkpoints hidden" id="fuji-checkpoints">
+              <div class="section-title-row">
+                <h2>Course Checkpoints</h2>
+                <span>average-speed ETA</span>
+              </div>
+              <div class="checkpoint-strip" id="fuji-checkpoint-strip"></div>
+              <p class="field-hint">Checkpoint ETA uses whole-segment average speed. Real course profile may vary.</p>
+            </section>
+
             <div class="warning-list" id="warning-list"></div>
 
             <section class="warning-callout above-cp hidden" id="above-cp-warning">
@@ -487,6 +545,6 @@
       </main>
     </div>
 
-    <script type="module" src="./src/app/main.js"></script>
+    <script type="module" src="./src/app/main.js?v=2"></script>
   </body>
 </html>

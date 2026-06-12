@@ -1,42 +1,48 @@
 const MIN_DURATION_SEC = 1;
 
 /**
- * Two-parameter CP model (Monod-Scherrer).
- * P(t) = cp + wPrime / t
+ * Two-parameter CP model (Monod-Scherrer), capped by Pmax.
+ *
+ * Definitions:
+ * - cp: critical power in watts.
+ * - wPrime: finite work capacity above CP in joules.
+ * - pMax: short-duration power ceiling in watts.
+ *
+ * Sustainable power uses P(t) = CP + W' / t. Pmax is not a third
+ * CP-model parameter here; it is a safety ceiling for very short efforts.
  */
-export function cpModel2Param({ cp, wPrime }, durationSec) {
+export function cpModel2Param({ cp, wPrime, pMax = Infinity }, durationSec) {
   const t = Math.max(durationSec, MIN_DURATION_SEC);
-  return cp + wPrime / t;
+  return Math.min(cp + wPrime / t, pMax);
 }
 
-/**
- * Three-parameter CP model (Morton Exponential).
- * P(t) = cp + wPrime * exp(-t / tau)
- */
-export function cpModel3Param({ cp, wPrime, tau }, durationSec) {
-  const t = Math.max(durationSec, MIN_DURATION_SEC);
-  return cp + wPrime * Math.exp(-t / tau);
+export function isValidPowerModel(model) {
+  return Boolean(
+    model &&
+    Number.isFinite(model.cp) &&
+    Number.isFinite(model.wPrime) &&
+    Number.isFinite(model.pMax) &&
+    model.cp > 0 &&
+    model.wPrime > 0 &&
+    model.pMax > model.cp
+  );
 }
 
-/**
- * Compute tau for the 3-param model from boundary conditions.
- * tau = wPrime / (pMax - cp)
- * Returns null if pMax <= cp (invalid).
- */
-export function estimateTau(cp, wPrime, pMax) {
-  if (pMax <= cp) {
+export function normalizePowerModel(model) {
+  if (!isValidPowerModel(model)) {
     return null;
   }
-  return wPrime / (pMax - cp);
+  return {
+    cp: Number(model.cp),
+    wPrime: Number(model.wPrime),
+    pMax: Number(model.pMax),
+  };
 }
 
-/**
- * Get sustainable power for a given duration using the available model.
- * Uses 3-param if tau is present, otherwise falls back to 2-param.
- */
 export function getPowerForDuration(model, durationSec) {
-  if (model.tau != null) {
-    return cpModel3Param(model, durationSec);
+  if (!isValidPowerModel(model)) {
+    return NaN;
   }
   return cpModel2Param(model, durationSec);
 }
+

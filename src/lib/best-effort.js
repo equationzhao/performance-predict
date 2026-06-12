@@ -1,5 +1,5 @@
 import { cyclingPowerFastestVelocitySearch } from "./physics.js";
-import { getPowerForDuration } from "./power-model.js";
+import { getPowerForDuration, isValidPowerModel } from "./power-model.js";
 
 const MAX_ITERATIONS = 50;
 const CONVERGENCE_EPSILON = 0.01; // seconds
@@ -7,7 +7,7 @@ const MIN_POWER = 1;
 const FALLBACK_VELOCITY = 5; // m/s if initial guess fails
 
 function clampPower(power, pMax) {
-  return Math.max(MIN_POWER, Math.min(power, pMax * 1.2));
+  return Math.max(MIN_POWER, Math.min(power, pMax));
 }
 
 function velocityFromPower(power, { slopeRatio, weightKg, crr, cda, elevationM, windMps, drivetrainLoss }) {
@@ -39,6 +39,10 @@ function velocityFromPower(power, { slopeRatio, weightKg, crr, cda, elevationM, 
  * @returns {{ timeSec, powerW, velocityMps, converged, iterations }}
  */
 export function solveBestEffort({ cpModel, distanceM, slopeRatio, weightKg, crr, cda, elevationM, windMps, drivetrainLoss }) {
+  if (!isValidPowerModel(cpModel) || !Number.isFinite(distanceM) || distanceM <= 0) {
+    return null;
+  }
+
   const segmentArgs = { slopeRatio, weightKg, crr, cda, elevationM, windMps, drivetrainLoss };
 
   // Initial guess: use CP power to estimate time
