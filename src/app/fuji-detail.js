@@ -126,23 +126,6 @@ function clearShellRect() {
   els.fujiDetailCard.style.transform = "";
 }
 
-function getRectArea(rect) {
-  return rect.width * rect.height;
-}
-
-function getShellLayoutRect(from, to) {
-  return getRectArea(from) > getRectArea(to) ? from : to;
-}
-
-function getRectTransform(rect, layoutRect) {
-  const scaleX = rect.width / layoutRect.width;
-  const scaleY = rect.height / layoutRect.height;
-  const translateX = rect.left - layoutRect.left;
-  const translateY = rect.top - layoutRect.top;
-
-  return `translate3d(${translateX}px, ${translateY}px, 0) scale(${scaleX}, ${scaleY})`;
-}
-
 function animateShellRect({ token, from, to, duration, easing, sourceRadius, targetRadius, onDone }) {
   stopActiveShellAnimation();
   if (transitionTimer) {
@@ -150,23 +133,28 @@ function animateShellRect({ token, from, to, duration, easing, sourceRadius, tar
     transitionTimer = 0;
   }
 
-  const layoutRect = getShellLayoutRect(from, to);
-
   els.fujiDetailCard.style.transition = "none";
-  setShellRect(layoutRect);
+  setShellRect(from);
   els.fujiDetailCard.style.opacity = "1";
   els.fujiDetailCard.style.borderRadius = sourceRadius;
-  els.fujiDetailCard.style.transform = getRectTransform(from, layoutRect);
 
   const animation = els.fujiDetailCard.animate(
     [
       {
-        transform: getRectTransform(from, layoutRect),
+        left: `${from.left}px`,
+        top: `${from.top}px`,
+        width: `${from.width}px`,
+        height: `${from.height}px`,
+        maxHeight: `${from.height}px`,
         borderRadius: sourceRadius,
         opacity: 1,
       },
       {
-        transform: getRectTransform(to, layoutRect),
+        left: `${to.left}px`,
+        top: `${to.top}px`,
+        width: `${to.width}px`,
+        height: `${to.height}px`,
+        maxHeight: `${to.height}px`,
         borderRadius: targetRadius,
         opacity: 1,
       },
