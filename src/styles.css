@@ -2503,9 +2503,9 @@ details[open] > summary .chevron {
 
 .fuji-detail-panel {
   display: none;
-  position: relative;
+  position: absolute;
+  inset: 0;
   z-index: 4;
-  height: 100%;
   min-height: 0;
   opacity: 0;
   pointer-events: none;
@@ -2521,14 +2521,25 @@ details[open] > summary .chevron {
   pointer-events: auto;
 }
 
+.fuji-detail-layer.is-closing .achievement-card.fuji-detail-card .fuji-detail-panel {
+  opacity: 0;
+  pointer-events: none;
+}
+
 .achievement-card.is-detail-shell .achievement-open-indicator,
 .achievement-card.is-detail-shell .achievement-content {
-  transition: opacity 140ms ease;
+  transition: none;
+}
+
+.achievement-card.fuji-detail-card .achievement-content {
+  position: absolute;
+  inset: 24px;
 }
 
 .achievement-card.fuji-detail-card.is-detail-content-visible .achievement-open-indicator,
 .achievement-card.fuji-detail-card.is-detail-content-visible .achievement-content {
   opacity: 0;
+  visibility: hidden;
   pointer-events: none;
 }
 

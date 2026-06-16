@@ -2,7 +2,6 @@ import { els } from "./dom.js";
 
 const DETAIL_OPEN_MS = 600;
 const DETAIL_CLOSE_MS = 460;
-const DETAIL_CONTENT_SWAP_MS = 140;
 const DETAIL_OPEN_EASING = "cubic-bezier(0.16, 1, 0.3, 1)";
 const DETAIL_CLOSE_EASING = "cubic-bezier(0.32, 0, 0.2, 1)";
 
@@ -11,7 +10,6 @@ let transitionTimer = 0;
 let previouslyFocused = null;
 let transitionToken = 0;
 let openingFallbackTimer = 0;
-let contentSwapTimer = 0;
 let activeShellAnimation = null;
 let sourceParent = null;
 let sourcePlaceholder = null;
@@ -42,10 +40,6 @@ function clearTransitionTimer() {
   if (openingFallbackTimer) {
     window.clearTimeout(openingFallbackTimer);
     openingFallbackTimer = 0;
-  }
-  if (contentSwapTimer) {
-    window.clearTimeout(contentSwapTimer);
-    contentSwapTimer = 0;
   }
 }
 
@@ -393,23 +387,17 @@ export function closeFujiDetail(options = {}) {
   isOpen = false;
   els.fujiDetailLayer.classList.remove("is-open", "is-opening", "is-measuring");
   els.fujiDetailLayer.classList.add("is-closing");
-  els.fujiAchievementCard.classList.remove("is-detail-content-visible");
 
-  contentSwapTimer = window.setTimeout(() => {
-    if (token !== transitionToken) return;
-    contentSwapTimer = 0;
-    els.fujiAchievementCard.classList.remove("fuji-detail-card");
-    animateShellRect({
-      token,
-      from: targetRect,
-      to: sourceRect,
-      duration: DETAIL_CLOSE_MS,
-      easing: DETAIL_CLOSE_EASING,
-      sourceRadius: "8px",
-      targetRadius: sourceRadius,
-      onDone: () => finishClose({ restoreFocus }),
-    });
-  }, DETAIL_CONTENT_SWAP_MS);
+  animateShellRect({
+    token,
+    from: targetRect,
+    to: sourceRect,
+    duration: DETAIL_CLOSE_MS,
+    easing: DETAIL_CLOSE_EASING,
+    sourceRadius: "8px",
+    targetRadius: sourceRadius,
+    onDone: () => finishClose({ restoreFocus }),
+  });
 }
 
 function handleDetailKeydown(event) {
