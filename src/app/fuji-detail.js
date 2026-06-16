@@ -10,10 +10,7 @@ let transitionTimer = 0;
 let previouslyFocused = null;
 let transitionToken = 0;
 let openingFallbackTimer = 0;
-let sourceRevealTimer = 0;
 let activeShellAnimation = null;
-let sourceReturnRect = null;
-let sourceReturnRadius = null;
 
 function hasDetailElements() {
   return Boolean(
@@ -39,10 +36,6 @@ function clearTransitionTimer() {
   if (openingFallbackTimer) {
     window.clearTimeout(openingFallbackTimer);
     openingFallbackTimer = 0;
-  }
-  if (sourceRevealTimer) {
-    window.clearTimeout(sourceRevealTimer);
-    sourceRevealTimer = 0;
   }
 }
 
@@ -245,8 +238,6 @@ function finishOpenTransition(token) {
 function finishClose({ restoreFocus } = { restoreFocus: true }) {
   clearTransitionTimer();
   isOpen = false;
-  sourceReturnRect = null;
-  sourceReturnRadius = null;
   els.fujiDetailLayer.classList.add("hidden");
   els.fujiDetailLayer.classList.remove("is-open", "is-opening", "is-closing", "is-measuring");
   els.fujiDetailCard.style.opacity = "";
@@ -281,8 +272,6 @@ export function openFujiDetail() {
 
   const sourceRect = toRectObject(els.fujiAchievementCard.getBoundingClientRect());
   const sourceRadius = getSourceRadius();
-  sourceReturnRect = sourceRect;
-  sourceReturnRadius = sourceRadius;
 
   els.fujiDetailLayer.classList.remove("hidden", "is-open", "is-closing");
   els.fujiDetailLayer.classList.add("is-measuring");
@@ -321,20 +310,20 @@ export function closeFujiDetail(options = {}) {
   const { immediate = false, restoreFocus = true } = options;
   clearTransitionTimer();
   const token = nextTransitionToken();
+  els.fujiAchievementCard.setAttribute("aria-expanded", "false");
 
   if (immediate || prefersReducedMotion() || els.fujiAchievementCard.classList.contains("hidden")) {
     finishClose({ restoreFocus });
     return;
   }
 
-  const sourceRect = sourceReturnRect || toRectObject(els.fujiAchievementCard.getBoundingClientRect());
+  const sourceRect = toRectObject(els.fujiAchievementCard.getBoundingClientRect());
   const targetRect = toRectObject(els.fujiDetailCard.getBoundingClientRect());
-  const sourceRadius = sourceReturnRadius || getSourceRadius();
+  const sourceRadius = getSourceRadius();
 
   isOpen = false;
   els.fujiDetailLayer.classList.remove("is-open", "is-opening", "is-measuring");
   els.fujiDetailLayer.classList.add("is-closing");
-  setExpandedState(false);
 
   animateShellRect({
     token,
@@ -346,13 +335,6 @@ export function closeFujiDetail(options = {}) {
     targetRadius: sourceRadius,
     onDone: () => finishClose({ restoreFocus }),
   });
-
-  sourceRevealTimer = window.setTimeout(() => {
-    if (token !== transitionToken) return;
-    els.fujiAchievementCard.classList.remove("is-focus-source-hidden");
-    sourceRevealTimer = 0;
-  }, Math.max(DETAIL_CLOSE_MS - 160, 0));
-
 }
 
 function handleDetailKeydown(event) {

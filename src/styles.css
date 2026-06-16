@@ -1989,7 +1989,7 @@ details[open] > summary .chevron {
     border-radius 560ms cubic-bezier(0.16, 1, 0.3, 1),
     border-color 260ms ease,
     box-shadow 260ms ease;
-  will-change: transform, opacity, border-radius;
+  will-change: left, top, width, height, max-height, opacity, border-radius;
 }
 
 .fuji-detail-card::before {
