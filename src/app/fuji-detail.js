@@ -99,7 +99,7 @@ function mountDetailShell(sourceRect) {
 
   setShellRect(sourceRect);
   els.fujiDetailLayer.appendChild(els.fujiAchievementCard);
-  els.fujiAchievementCard.classList.add("is-detail-shell");
+  els.fujiAchievementCard.classList.add("is-detail-shell", "is-detail-summary-hidden");
   els.fujiAchievementCard.classList.remove("achievement-card--interactive");
 }
 
@@ -112,7 +112,7 @@ function restoreDetailShell() {
   sourceParent = null;
   sourcePlaceholder = null;
   sourceReturnRadius = null;
-  els.fujiAchievementCard.classList.remove("is-detail-shell", "fuji-detail-card", "is-detail-content-visible");
+  els.fujiAchievementCard.classList.remove("is-detail-shell", "is-detail-summary-hidden", "fuji-detail-card", "is-detail-content-visible");
   els.fujiAchievementCard.classList.add("achievement-card--interactive");
 }
 

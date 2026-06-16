@@ -1,6 +1,6 @@
 import { els } from "./dom.js";
 import { initAchievementTilt } from "./achievement-tilt.js";
-import { initFujiDetail } from "./fuji-detail.js?v=14";
+import { initFujiDetail } from "./fuji-detail.js?v=15";
 import { computeEffectiveCda, estimateWithDrafting } from "./drafting.js";
 import {
   normalizeDraftingControls,

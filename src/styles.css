@@ -2531,6 +2531,13 @@ details[open] > summary .chevron {
   transition: none;
 }
 
+.achievement-card.is-detail-summary-hidden .achievement-open-indicator,
+.achievement-card.is-detail-summary-hidden .achievement-content {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .achievement-card.fuji-detail-card .achievement-content {
   position: absolute;
   inset: 24px;
