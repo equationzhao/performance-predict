@@ -2073,7 +2073,7 @@ details[open] > summary .chevron {
 }
 
 .fuji-detail-layer.is-closing .fuji-detail-topbar {
-  opacity: 0.72;
+  opacity: 1;
   transform: none;
   transition:
     opacity 360ms ease,
@@ -2095,8 +2095,8 @@ details[open] > summary .chevron {
 }
 
 .fuji-detail-layer.is-closing .fuji-detail-body {
-  opacity: 0.84;
-  transform: scale(0.992);
+  opacity: 1;
+  transform: none;
 }
 
 .fuji-detail-column {
@@ -2167,25 +2167,37 @@ details[open] > summary .chevron {
 .fuji-detail-layer.is-closing .fuji-detail-card .fuji-event-card,
 .fuji-detail-layer.is-closing .fuji-detail-card .fuji-ring-ladder,
 .fuji-detail-layer.is-closing .fuji-detail-card .fuji-checkpoints {
-  opacity: 0;
-  transform: translateY(8px);
+  opacity: 1;
+  transform: none;
   transition-delay: 0ms;
-  transition-duration: 180ms;
+  transition-duration: 0ms;
 }
 
 .fuji-detail-layer.is-closing .fuji-detail-card .ring-step,
 .fuji-detail-layer.is-closing .fuji-detail-card .checkpoint {
-  opacity: 0;
   animation: none;
+  opacity: 1;
+  transform: none;
   transition-delay: 0ms;
-  transition-duration: 140ms;
+  transition-duration: 0ms;
 }
 
 .fuji-detail-layer.is-closing .checkpoint-strip::before {
-  animation: none;
-  transform: scaleX(0);
+  transform: scaleX(1);
+  transform-origin: left center;
   transition-delay: 0ms;
-  transition-duration: 140ms;
+  transition-duration: 0ms;
+  animation: none;
+}
+
+.fuji-detail-layer.is-closing .checkpoint-strip::before,
+.fuji-detail-layer.is-closing .fuji-detail-card .ring-step,
+.fuji-detail-layer.is-closing .fuji-detail-card .checkpoint {
+  opacity: 1;
+}
+
+.fuji-detail-layer.is-closing .fuji-detail-card .ring-step.current {
+  animation: none;
 }
 
 .fuji-detail-hero-card {
