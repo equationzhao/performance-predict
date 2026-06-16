@@ -122,7 +122,7 @@ body.fuji-detail-open .page-header,
 body.fuji-detail-open .mobile-summary,
 body.fuji-detail-open .predictor-layout > .input-panel,
 body.fuji-detail-open .result-state,
-body.fuji-detail-open .result-success > :not(.fuji-detail-layer) {
+body.fuji-detail-open .result-success > :not(.fuji-detail-layer):not(.achievement-card-placeholder) {
   opacity: 0.72;
   filter: blur(5px);
   transform: scale(0.985);
@@ -2469,6 +2469,69 @@ details[open] > summary .chevron {
   user-select: none;
 }
 
+.achievement-card-placeholder {
+  min-width: 0;
+  pointer-events: none;
+}
+
+.achievement-card.is-detail-shell {
+  z-index: 101;
+  margin: 0;
+  animation: none;
+  transform: none;
+  will-change: left, top, width, height, max-height, opacity, border-radius;
+}
+
+.achievement-card.fuji-detail-card {
+  width: min(980px, calc(100vw - 32px));
+  max-height: min(86vh, 820px);
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--tier-color) 40%, rgba(255, 255, 255, 0.08));
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at 18% 0%, var(--tier-bg), transparent 30%),
+    radial-gradient(circle at 85% 105%, rgba(125, 211, 252, 0.08), transparent 32%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.015)),
+    #101620;
+  box-shadow:
+    0 28px 90px rgba(0, 0, 0, 0.58),
+    0 0 54px var(--tier-glow);
+  cursor: auto;
+  user-select: auto;
+  transform-style: flat;
+}
+
+.fuji-detail-panel {
+  display: none;
+  position: relative;
+  z-index: 4;
+  height: 100%;
+  min-height: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 160ms ease;
+}
+
+.achievement-card.fuji-detail-card .fuji-detail-panel {
+  display: block;
+}
+
+.achievement-card.fuji-detail-card.is-detail-content-visible .fuji-detail-panel {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.achievement-card.is-detail-shell .achievement-open-indicator,
+.achievement-card.is-detail-shell .achievement-content {
+  transition: opacity 140ms ease;
+}
+
+.achievement-card.fuji-detail-card.is-detail-content-visible .achievement-open-indicator,
+.achievement-card.fuji-detail-card.is-detail-content-visible .achievement-content {
+  opacity: 0;
+  pointer-events: none;
+}
+
 .achievement-card.is-focus-source-hidden {
   opacity: 0 !important;
   pointer-events: none;
@@ -3405,6 +3468,11 @@ details[open] > summary .chevron {
     max-height: 92vh;
   }
 
+  .achievement-card.fuji-detail-card {
+    width: calc(100vw - 20px);
+    max-height: 92vh;
+  }
+
   .fuji-detail-topbar {
     min-height: 58px;
     padding: 12px;
@@ -3550,7 +3618,7 @@ details[open] > summary .chevron {
   body.fuji-detail-open .mobile-summary,
   body.fuji-detail-open .predictor-layout > .input-panel,
   body.fuji-detail-open .result-state,
-  body.fuji-detail-open .result-success > :not(.fuji-detail-layer) {
+  body.fuji-detail-open .result-success > :not(.fuji-detail-layer):not(.achievement-card-placeholder) {
     filter: none !important;
     transform: none !important;
   }

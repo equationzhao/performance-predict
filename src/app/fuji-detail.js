@@ -2,6 +2,7 @@ import { els } from "./dom.js";
 
 const DETAIL_OPEN_MS = 600;
 const DETAIL_CLOSE_MS = 460;
+const DETAIL_CONTENT_SWAP_MS = 140;
 const DETAIL_OPEN_EASING = "cubic-bezier(0.16, 1, 0.3, 1)";
 const DETAIL_CLOSE_EASING = "cubic-bezier(0.32, 0, 0.2, 1)";
 
@@ -10,13 +11,18 @@ let transitionTimer = 0;
 let previouslyFocused = null;
 let transitionToken = 0;
 let openingFallbackTimer = 0;
+let contentSwapTimer = 0;
 let activeShellAnimation = null;
+let sourceParent = null;
+let sourcePlaceholder = null;
+let sourceReturnRadius = null;
 
 function hasDetailElements() {
   return Boolean(
     els.fujiAchievementCard &&
     els.fujiDetailLayer &&
     els.fujiDetailBackdrop &&
+    els.fujiDetailPanel &&
     els.fujiDetailCard &&
     els.fujiDetailClose &&
     els.fujiDetailHeroCard
@@ -36,6 +42,10 @@ function clearTransitionTimer() {
   if (openingFallbackTimer) {
     window.clearTimeout(openingFallbackTimer);
     openingFallbackTimer = 0;
+  }
+  if (contentSwapTimer) {
+    window.clearTimeout(contentSwapTimer);
+    contentSwapTimer = 0;
   }
 }
 
@@ -72,6 +82,60 @@ function resetSourceCardTilt() {
   els.fujiAchievementCard.style.setProperty("--py", "0px");
   els.fujiAchievementCard.style.setProperty("--mx", "50%");
   els.fujiAchievementCard.style.setProperty("--my", "50%");
+}
+
+function createSourcePlaceholder(rect) {
+  const computed = window.getComputedStyle(els.fujiAchievementCard);
+  const placeholder = document.createElement("div");
+  placeholder.className = "achievement-card-placeholder";
+  placeholder.style.height = `${rect.height}px`;
+  placeholder.style.marginTop = computed.marginTop;
+  placeholder.style.marginRight = computed.marginRight;
+  placeholder.style.marginBottom = computed.marginBottom;
+  placeholder.style.marginLeft = computed.marginLeft;
+  return placeholder;
+}
+
+function mountDetailShell(sourceRect) {
+  if (!sourcePlaceholder) {
+    sourceParent = els.fujiAchievementCard.parentNode;
+    sourcePlaceholder = createSourcePlaceholder(sourceRect);
+    sourceParent.insertBefore(sourcePlaceholder, els.fujiAchievementCard);
+  }
+
+  setShellRect(sourceRect);
+  els.fujiDetailLayer.appendChild(els.fujiAchievementCard);
+  els.fujiAchievementCard.classList.add("is-detail-shell");
+  els.fujiAchievementCard.classList.remove("achievement-card--interactive");
+}
+
+function restoreDetailShell() {
+  if (sourceParent && sourcePlaceholder?.isConnected) {
+    sourceParent.insertBefore(els.fujiAchievementCard, sourcePlaceholder);
+    sourcePlaceholder.remove();
+  }
+
+  sourceParent = null;
+  sourcePlaceholder = null;
+  sourceReturnRadius = null;
+  els.fujiAchievementCard.classList.remove("is-detail-shell", "fuji-detail-card", "is-detail-content-visible");
+  els.fujiAchievementCard.classList.add("achievement-card--interactive");
+}
+
+function setDialogSemantics() {
+  els.fujiAchievementCard.setAttribute("role", "dialog");
+  els.fujiAchievementCard.setAttribute("aria-modal", "true");
+  els.fujiAchievementCard.setAttribute("aria-labelledby", "fuji-detail-title");
+  els.fujiAchievementCard.setAttribute("tabindex", "-1");
+  els.fujiDetailPanel.setAttribute("aria-hidden", "false");
+}
+
+function setButtonSemantics() {
+  els.fujiAchievementCard.setAttribute("role", "button");
+  els.fujiAchievementCard.removeAttribute("aria-modal");
+  els.fujiAchievementCard.removeAttribute("aria-labelledby");
+  els.fujiAchievementCard.setAttribute("tabindex", "0");
+  els.fujiDetailPanel.setAttribute("aria-hidden", "true");
 }
 
 function toRectObject(domRect) {
@@ -229,6 +293,7 @@ function finishOpenTransition(token) {
   els.fujiDetailLayer.classList.remove("is-measuring");
   els.fujiDetailLayer.classList.remove("is-opening");
   els.fujiDetailLayer.classList.add("is-open");
+  els.fujiAchievementCard.classList.add("fuji-detail-card", "is-detail-content-visible");
   els.fujiDetailCard.style.opacity = "";
   els.fujiDetailCard.style.borderRadius = "";
   els.fujiDetailCard.style.transition = "";
@@ -242,8 +307,9 @@ function finishClose({ restoreFocus } = { restoreFocus: true }) {
   els.fujiDetailLayer.classList.remove("is-open", "is-opening", "is-closing", "is-measuring");
   els.fujiDetailCard.style.opacity = "";
   els.fujiDetailCard.style.borderRadius = "";
+  restoreDetailShell();
   clearShellRect();
-  els.fujiAchievementCard.classList.remove("is-focus-source-hidden");
+  setButtonSemantics();
   setExpandedState(false);
 
   if (restoreFocus && previouslyFocused?.isConnected) {
@@ -272,31 +338,34 @@ export function openFujiDetail() {
 
   const sourceRect = toRectObject(els.fujiAchievementCard.getBoundingClientRect());
   const sourceRadius = getSourceRadius();
+  sourceReturnRadius = sourceRadius;
 
+  clearShellRect();
+  mountDetailShell(sourceRect);
+  setDialogSemantics();
+  setExpandedState(true);
   els.fujiDetailLayer.classList.remove("hidden", "is-open", "is-closing");
   els.fujiDetailLayer.classList.add("is-measuring");
-  setExpandedState(true);
-  clearShellRect();
   els.fujiDetailCard.style.opacity = "";
   els.fujiDetailCard.style.borderRadius = "";
 
+  const targetRect = getDetailTargetRect();
+
   if (prefersReducedMotion()) {
+    setShellRect(targetRect);
     els.fujiDetailLayer.classList.remove("is-measuring");
     els.fujiDetailLayer.classList.remove("is-opening");
     els.fujiDetailLayer.classList.add("is-open");
-    els.fujiAchievementCard.classList.add("is-focus-source-hidden");
+    els.fujiAchievementCard.classList.add("fuji-detail-card", "is-detail-content-visible");
     focusDetail();
     return;
   }
-
-  const targetRect = getDetailTargetRect();
 
   setShellRect(targetRect);
 
   setShellRect(sourceRect);
   els.fujiDetailCard.style.opacity = "1";
   els.fujiDetailCard.style.borderRadius = sourceRadius;
-  els.fujiAchievementCard.classList.add("is-focus-source-hidden");
 
   void els.fujiDetailCard.offsetWidth;
   beginOpenTransition({ token, sourceRect, targetRect, sourceRadius });
@@ -317,24 +386,30 @@ export function closeFujiDetail(options = {}) {
     return;
   }
 
-  const sourceRect = toRectObject(els.fujiAchievementCard.getBoundingClientRect());
+  const sourceRect = toRectObject((sourcePlaceholder || els.fujiAchievementCard).getBoundingClientRect());
   const targetRect = toRectObject(els.fujiDetailCard.getBoundingClientRect());
-  const sourceRadius = getSourceRadius();
+  const sourceRadius = sourceReturnRadius || "22px";
 
   isOpen = false;
   els.fujiDetailLayer.classList.remove("is-open", "is-opening", "is-measuring");
   els.fujiDetailLayer.classList.add("is-closing");
+  els.fujiAchievementCard.classList.remove("is-detail-content-visible");
 
-  animateShellRect({
-    token,
-    from: targetRect,
-    to: sourceRect,
-    duration: DETAIL_CLOSE_MS,
-    easing: DETAIL_CLOSE_EASING,
-    sourceRadius: "8px",
-    targetRadius: sourceRadius,
-    onDone: () => finishClose({ restoreFocus }),
-  });
+  contentSwapTimer = window.setTimeout(() => {
+    if (token !== transitionToken) return;
+    contentSwapTimer = 0;
+    els.fujiAchievementCard.classList.remove("fuji-detail-card");
+    animateShellRect({
+      token,
+      from: targetRect,
+      to: sourceRect,
+      duration: DETAIL_CLOSE_MS,
+      easing: DETAIL_CLOSE_EASING,
+      sourceRadius: "8px",
+      targetRadius: sourceRadius,
+      onDone: () => finishClose({ restoreFocus }),
+    });
+  }, DETAIL_CONTENT_SWAP_MS);
 }
 
 function handleDetailKeydown(event) {
@@ -370,9 +445,13 @@ export function initFujiDetail() {
   if (!hasDetailElements()) return;
 
   els.fujiAchievementCard.addEventListener("pointerdown", () => resetSourceCardTilt());
-  els.fujiAchievementCard.addEventListener("click", () => openFujiDetail());
+  els.fujiAchievementCard.addEventListener("click", () => {
+    if (isOpen || els.fujiAchievementCard.classList.contains("is-detail-shell")) return;
+    openFujiDetail();
+  });
   els.fujiAchievementCard.addEventListener("keydown", event => {
     if (event.key !== "Enter" && event.key !== " ") return;
+    if (isOpen || els.fujiAchievementCard.classList.contains("is-detail-shell")) return;
     event.preventDefault();
     openFujiDetail();
   });
