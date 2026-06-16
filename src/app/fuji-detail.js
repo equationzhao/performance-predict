@@ -2,64 +2,8 @@ import { els } from "./dom.js";
 
 const DETAIL_OPEN_MS = 600;
 const DETAIL_CLOSE_MS = 460;
-const SHARED_OPEN_EASING = "cubic-bezier(0.16, 1, 0.3, 1)";
-const SHARED_CLOSE_EASING = "cubic-bezier(0.32, 0, 0.2, 1)";
-
-const SHARED_ELEMENT_DEFS = [
-  {
-    key: "ring",
-    source: "#fuji-achievement-card .achievement-ring-wrap",
-    target: "#fuji-detail-hero-card .fuji-detail-ring-stack",
-    zIndex: 104,
-  },
-  {
-    key: "kicker",
-    source: "#fuji-achievement-kicker",
-    target: "#fuji-detail-achievement-kicker",
-    zIndex: 106,
-  },
-  {
-    key: "title",
-    source: "#fuji-achievement-title",
-    target: "#fuji-detail-achievement-title",
-    zIndex: 107,
-  },
-  {
-    key: "gap",
-    source: "#fuji-achievement-gap",
-    target: "#fuji-detail-achievement-gap",
-    zIndex: 106,
-  },
-  {
-    key: "time",
-    source: "#fuji-big-time",
-    target: "#fuji-detail-big-time",
-    zIndex: 108,
-  },
-  {
-    key: "target",
-    source: "#fuji-achievement-target",
-    target: "#fuji-detail-achievement-target",
-    zIndex: 105,
-  },
-];
-
-const SHARED_TARGET_ONLY_SELECTORS = [
-  ".fuji-detail-time-card > span",
-];
-
-const SHARED_CSS_VARIABLES = [
-  "--tier-color",
-  "--tier-color-2",
-  "--tier-color-3",
-  "--tier-bg",
-  "--tier-glow",
-  "--aura-speed",
-  "--shine-speed",
-  "--particle-alpha",
-  "--px",
-  "--py",
-];
+const DETAIL_OPEN_EASING = "cubic-bezier(0.16, 1, 0.3, 1)";
+const DETAIL_CLOSE_EASING = "cubic-bezier(0.32, 0, 0.2, 1)";
 
 let isOpen = false;
 let transitionTimer = 0;
@@ -68,7 +12,6 @@ let transitionToken = 0;
 let openingFallbackTimer = 0;
 let sourceRevealTimer = 0;
 let activeShellAnimation = null;
-let activeSharedTransition = null;
 let sourceReturnRect = null;
 let sourceReturnRadius = null;
 
@@ -89,7 +32,6 @@ function prefersReducedMotion() {
 
 function clearTransitionTimer() {
   stopActiveShellAnimation();
-  clearSharedTransition();
   if (transitionTimer) {
     window.clearTimeout(transitionTimer);
     transitionTimer = 0;
@@ -115,21 +57,6 @@ function stopActiveShellAnimation() {
 
   activeShellAnimation.cancel();
   activeShellAnimation = null;
-}
-
-function clearSharedTransition() {
-  if (!activeSharedTransition) return;
-
-  for (const animation of activeSharedTransition.animations) {
-    animation.cancel();
-  }
-
-  for (const element of activeSharedTransition.hiddenElements) {
-    restoreSharedElement(element);
-  }
-
-  activeSharedTransition.layer.remove();
-  activeSharedTransition = null;
 }
 
 function nextTransitionToken() {
@@ -178,217 +105,6 @@ function getDetailTargetRect() {
   };
 }
 
-function isTransitionableElement(element) {
-  if (!element || element.closest(".hidden")) return false;
-
-  const style = window.getComputedStyle(element);
-  if (style.display === "none") return false;
-
-  const rect = element.getBoundingClientRect();
-  return rect.width > 1 && rect.height > 1;
-}
-
-function collectSharedSnapshots(side) {
-  const selectorKey = side === "source" ? "source" : "target";
-
-  return SHARED_ELEMENT_DEFS.reduce((snapshots, def) => {
-    const element = document.querySelector(def[selectorKey]);
-    if (!isTransitionableElement(element)) return snapshots;
-
-    snapshots.set(def.key, {
-      def,
-      element,
-      rect: toRectObject(element.getBoundingClientRect()),
-      style: getSharedMotionStyle(element),
-    });
-    return snapshots;
-  }, new Map());
-}
-
-function buildSharedPairs({ direction, sourceSnapshots, targetSnapshots }) {
-  const pairs = [];
-
-  for (const def of SHARED_ELEMENT_DEFS) {
-    const source = sourceSnapshots.get(def.key);
-    const target = targetSnapshots.get(def.key);
-    if (!source || !target) continue;
-
-    pairs.push({
-      def,
-      sourceElement: source.element,
-      targetElement: target.element,
-      fromElement: direction === "open" ? source.element : target.element,
-      fromRect: direction === "open" ? source.rect : target.rect,
-      fromStyle: direction === "open" ? source.style : target.style,
-      toRect: direction === "open" ? target.rect : source.rect,
-      toStyle: direction === "open" ? target.style : source.style,
-    });
-  }
-
-  return pairs;
-}
-
-function getSharedMotionStyle(element) {
-  const style = window.getComputedStyle(element);
-  const variables = SHARED_CSS_VARIABLES.reduce((values, name) => {
-    values[name] = style.getPropertyValue(name);
-    return values;
-  }, {});
-
-  return {
-    backgroundColor: style.backgroundColor,
-    borderColor: style.borderColor,
-    borderRadius: style.borderRadius,
-    borderWidth: style.borderWidth,
-    color: style.color,
-    fontFamily: style.fontFamily,
-    fontSize: style.fontSize,
-    fontWeight: style.fontWeight,
-    letterSpacing: style.letterSpacing,
-    lineHeight: style.lineHeight,
-    paddingBottom: style.paddingBottom,
-    paddingLeft: style.paddingLeft,
-    paddingRight: style.paddingRight,
-    paddingTop: style.paddingTop,
-    textShadow: style.textShadow,
-    variables,
-  };
-}
-
-function stripCloneIds(element) {
-  element.removeAttribute("id");
-  for (const child of element.querySelectorAll("[id]")) {
-    child.removeAttribute("id");
-  }
-}
-
-function setGhostRect(element, rect) {
-  element.style.left = `${rect.left}px`;
-  element.style.top = `${rect.top}px`;
-  element.style.width = `${rect.width}px`;
-  element.style.height = `${rect.height}px`;
-}
-
-function applyGhostStyle(element, style) {
-  for (const [name, value] of Object.entries(style.variables)) {
-    if (value) element.style.setProperty(name, value);
-  }
-
-  element.style.backgroundColor = style.backgroundColor;
-  element.style.borderColor = style.borderColor;
-  element.style.borderRadius = style.borderRadius;
-  element.style.borderWidth = style.borderWidth;
-  element.style.color = style.color;
-  element.style.fontFamily = style.fontFamily;
-  element.style.fontSize = style.fontSize;
-  element.style.fontWeight = style.fontWeight;
-  element.style.letterSpacing = style.letterSpacing;
-  element.style.lineHeight = style.lineHeight;
-  element.style.paddingBottom = style.paddingBottom;
-  element.style.paddingLeft = style.paddingLeft;
-  element.style.paddingRight = style.paddingRight;
-  element.style.paddingTop = style.paddingTop;
-  element.style.textShadow = style.textShadow;
-}
-
-function createSharedGhost(pair) {
-  const ghost = pair.fromElement.cloneNode(true);
-  stripCloneIds(ghost);
-  ghost.setAttribute("aria-hidden", "true");
-  ghost.classList.add("fuji-shared-ghost", `fuji-shared-ghost--${pair.def.key}`);
-  ghost.dataset.tier = pair.fromElement.closest("[data-tier]")?.dataset.tier || els.fujiDetailCard.dataset.tier || "silver";
-  ghost.style.position = "fixed";
-  ghost.style.margin = "0";
-  ghost.style.maxWidth = "none";
-  ghost.style.minWidth = "0";
-  ghost.style.pointerEvents = "none";
-  ghost.style.transform = "none";
-  ghost.style.transformOrigin = "top left";
-  ghost.style.zIndex = String(pair.def.zIndex);
-  setGhostRect(ghost, pair.fromRect);
-  applyGhostStyle(ghost, pair.fromStyle);
-  return ghost;
-}
-
-function sharedKeyframe(rect, style) {
-  return {
-    ...rectKeyframe(rect, style.borderRadius),
-    backgroundColor: style.backgroundColor,
-    borderColor: style.borderColor,
-    borderWidth: style.borderWidth,
-    color: style.color,
-    fontSize: style.fontSize,
-    fontWeight: style.fontWeight,
-    letterSpacing: style.letterSpacing,
-    lineHeight: style.lineHeight,
-    opacity: 1,
-    paddingBottom: style.paddingBottom,
-    paddingLeft: style.paddingLeft,
-    paddingRight: style.paddingRight,
-    paddingTop: style.paddingTop,
-    textShadow: style.textShadow,
-  };
-}
-
-function hideSharedElement(element, hiddenElements) {
-  if (!element || hiddenElements.includes(element)) return;
-
-  element.dataset.fujiSharedPreviousVisibility = element.style.visibility;
-  element.dataset.fujiSharedHidden = "true";
-  element.style.visibility = "hidden";
-  hiddenElements.push(element);
-}
-
-function restoreSharedElement(element) {
-  if (!element?.dataset.fujiSharedHidden) return;
-
-  element.style.visibility = element.dataset.fujiSharedPreviousVisibility || "";
-  delete element.dataset.fujiSharedPreviousVisibility;
-  delete element.dataset.fujiSharedHidden;
-}
-
-function collectTargetOnlyElements() {
-  return SHARED_TARGET_ONLY_SELECTORS
-    .map(selector => els.fujiDetailCard.querySelector(selector))
-    .filter(isTransitionableElement);
-}
-
-function startSharedTransition({ direction, pairs, duration, easing }) {
-  if (pairs.length === 0) return;
-
-  const layer = document.createElement("div");
-  layer.className = `fuji-shared-transition-layer is-${direction}`;
-  els.fujiDetailLayer.appendChild(layer);
-
-  const hiddenElements = [];
-  const animations = [];
-
-  for (const pair of pairs) {
-    const ghost = createSharedGhost(pair);
-    layer.appendChild(ghost);
-    hideSharedElement(pair.sourceElement, hiddenElements);
-    hideSharedElement(pair.targetElement, hiddenElements);
-
-    animations.push(ghost.animate(
-      [
-        sharedKeyframe(pair.fromRect, pair.fromStyle),
-        sharedKeyframe(pair.toRect, pair.toStyle),
-      ],
-      {
-        duration,
-        easing,
-        fill: "both",
-      }
-    ));
-  }
-
-  for (const element of collectTargetOnlyElements()) {
-    hideSharedElement(element, hiddenElements);
-  }
-
-  activeSharedTransition = { animations, hiddenElements, layer };
-}
-
 function setShellRect(rect) {
   els.fujiDetailCard.style.position = "fixed";
   els.fujiDetailCard.style.left = `${rect.left}px`;
@@ -410,15 +126,21 @@ function clearShellRect() {
   els.fujiDetailCard.style.transform = "";
 }
 
-function rectKeyframe(rect, borderRadius) {
-  return {
-    left: `${rect.left}px`,
-    top: `${rect.top}px`,
-    width: `${rect.width}px`,
-    height: `${rect.height}px`,
-    maxHeight: `${rect.height}px`,
-    borderRadius,
-  };
+function getRectArea(rect) {
+  return rect.width * rect.height;
+}
+
+function getShellLayoutRect(from, to) {
+  return getRectArea(from) > getRectArea(to) ? from : to;
+}
+
+function getRectTransform(rect, layoutRect) {
+  const scaleX = rect.width / layoutRect.width;
+  const scaleY = rect.height / layoutRect.height;
+  const translateX = rect.left - layoutRect.left;
+  const translateY = rect.top - layoutRect.top;
+
+  return `translate3d(${translateX}px, ${translateY}px, 0) scale(${scaleX}, ${scaleY})`;
 }
 
 function animateShellRect({ token, from, to, duration, easing, sourceRadius, targetRadius, onDone }) {
@@ -428,15 +150,26 @@ function animateShellRect({ token, from, to, duration, easing, sourceRadius, tar
     transitionTimer = 0;
   }
 
+  const layoutRect = getShellLayoutRect(from, to);
+
   els.fujiDetailCard.style.transition = "none";
-  setShellRect(to);
+  setShellRect(layoutRect);
   els.fujiDetailCard.style.opacity = "1";
-  els.fujiDetailCard.style.borderRadius = targetRadius;
+  els.fujiDetailCard.style.borderRadius = sourceRadius;
+  els.fujiDetailCard.style.transform = getRectTransform(from, layoutRect);
 
   const animation = els.fujiDetailCard.animate(
     [
-      rectKeyframe(from, sourceRadius),
-      rectKeyframe(to, targetRadius),
+      {
+        transform: getRectTransform(from, layoutRect),
+        borderRadius: sourceRadius,
+        opacity: 1,
+      },
+      {
+        transform: getRectTransform(to, layoutRect),
+        borderRadius: targetRadius,
+        opacity: 1,
+      },
     ],
     {
       duration,
@@ -457,12 +190,8 @@ function animateShellRect({ token, from, to, duration, easing, sourceRadius, tar
     }
     activeShellAnimation = null;
     setShellRect(to);
+    els.fujiDetailCard.style.transform = "";
     els.fujiDetailCard.style.borderRadius = targetRadius;
-    try {
-      animation.commitStyles();
-    } catch {
-      // Final inline styles are already written by setShellRect.
-    }
     animation.cancel();
     onDone();
   };
@@ -498,7 +227,7 @@ function beginOpenTransition({ token, sourceRect, targetRect, sourceRadius }) {
     from: sourceRect,
     to: targetRect,
     duration: DETAIL_OPEN_MS,
-    easing: SHARED_OPEN_EASING,
+    easing: DETAIL_OPEN_EASING,
     sourceRadius,
     targetRadius: "8px",
     onDone: () => finishOpenTransition(token),
@@ -519,7 +248,6 @@ function finishOpenTransition(token) {
   els.fujiDetailLayer.classList.remove("is-measuring");
   els.fujiDetailLayer.classList.remove("is-opening");
   els.fujiDetailLayer.classList.add("is-open");
-  clearSharedTransition();
   els.fujiDetailCard.style.opacity = "";
   els.fujiDetailCard.style.borderRadius = "";
   els.fujiDetailCard.style.transition = "";
@@ -565,7 +293,6 @@ export function openFujiDetail() {
 
   const sourceRect = toRectObject(els.fujiAchievementCard.getBoundingClientRect());
   const sourceRadius = getSourceRadius();
-  const sourceSharedSnapshots = collectSharedSnapshots("source");
   sourceReturnRect = sourceRect;
   sourceReturnRadius = sourceRadius;
 
@@ -588,23 +315,11 @@ export function openFujiDetail() {
   const targetRect = getDetailTargetRect();
 
   setShellRect(targetRect);
-  const targetSharedSnapshots = collectSharedSnapshots("target");
-  const sharedPairs = buildSharedPairs({
-    direction: "open",
-    sourceSnapshots: sourceSharedSnapshots,
-    targetSnapshots: targetSharedSnapshots,
-  });
 
   setShellRect(sourceRect);
   els.fujiDetailCard.style.opacity = "1";
   els.fujiDetailCard.style.borderRadius = sourceRadius;
   els.fujiAchievementCard.classList.add("is-focus-source-hidden");
-  startSharedTransition({
-    direction: "open",
-    pairs: sharedPairs,
-    duration: DETAIL_OPEN_MS,
-    easing: SHARED_OPEN_EASING,
-  });
 
   void els.fujiDetailCard.offsetWidth;
   beginOpenTransition({ token, sourceRect, targetRect, sourceRadius });
@@ -627,31 +342,18 @@ export function closeFujiDetail(options = {}) {
   const sourceRect = sourceReturnRect || toRectObject(els.fujiAchievementCard.getBoundingClientRect());
   const targetRect = toRectObject(els.fujiDetailCard.getBoundingClientRect());
   const sourceRadius = sourceReturnRadius || getSourceRadius();
-  const sourceSharedSnapshots = collectSharedSnapshots("source");
-  const targetSharedSnapshots = collectSharedSnapshots("target");
-  const sharedPairs = buildSharedPairs({
-    direction: "close",
-    sourceSnapshots: sourceSharedSnapshots,
-    targetSnapshots: targetSharedSnapshots,
-  });
 
   isOpen = false;
   els.fujiDetailLayer.classList.remove("is-open", "is-opening", "is-measuring");
   els.fujiDetailLayer.classList.add("is-closing");
   setExpandedState(false);
-  startSharedTransition({
-    direction: "close",
-    pairs: sharedPairs,
-    duration: DETAIL_CLOSE_MS,
-    easing: SHARED_CLOSE_EASING,
-  });
 
   animateShellRect({
     token,
     from: targetRect,
     to: sourceRect,
     duration: DETAIL_CLOSE_MS,
-    easing: SHARED_CLOSE_EASING,
+    easing: DETAIL_CLOSE_EASING,
     sourceRadius: "8px",
     targetRadius: sourceRadius,
     onDone: () => finishClose({ restoreFocus }),

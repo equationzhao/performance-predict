@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300..800;1,9..40,300..800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="./src/styles.css?v=8" />
+    <link rel="stylesheet" href="./src/styles.css?v=17" />
   </head>
   <body>
     <div class="app-shell">
@@ -411,7 +411,11 @@
 
               <div class="achievement-content">
                 <div class="achievement-ring-wrap">
-                  <div class="achievement-ring-orb" id="fuji-ring-orb" aria-hidden="true"></div>
+                  <svg class="achievement-ring-orb" id="fuji-ring-orb" viewBox="0 0 128 128" aria-hidden="true" focusable="false">
+                    <circle class="ring-orb-aura" cx="64" cy="64" r="56"></circle>
+                    <circle class="ring-orb-main" cx="64" cy="64" r="52"></circle>
+                    <circle class="ring-orb-glint" cx="64" cy="64" r="42"></circle>
+                  </svg>
                   <div class="achievement-particles" aria-hidden="true">
                     <i></i><i></i><i></i><i></i><i></i><i></i>
                   </div>
@@ -554,7 +558,11 @@
             <div class="fuji-detail-column fuji-detail-column--lead">
               <section class="fuji-detail-hero-card" id="fuji-detail-hero-card" data-tier="silver">
                 <div class="fuji-detail-ring-stack" aria-hidden="true">
-                  <div class="fuji-detail-ring-orb"></div>
+                  <svg class="fuji-detail-ring-orb" id="fuji-detail-ring-orb" viewBox="0 0 128 128" aria-hidden="true" focusable="false">
+                    <circle class="ring-orb-aura" cx="64" cy="64" r="56"></circle>
+                    <circle class="ring-orb-main" cx="64" cy="64" r="52"></circle>
+                    <circle class="ring-orb-glint" cx="64" cy="64" r="42"></circle>
+                  </svg>
                 </div>
                 <div class="fuji-detail-achievement-copy">
                   <span class="achievement-kicker" id="fuji-detail-achievement-kicker">Achievement</span>
@@ -606,6 +614,6 @@
       </div>
     </div>
 
-    <script type="module" src="./src/app/main.js?v=7"></script>
+    <script type="module" src="./src/app/main.js?v=15"></script>
   </body>
 </html>
