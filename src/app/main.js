@@ -338,6 +338,8 @@ function renderBestEffortPrediction(input) {
     rider: { ...input.rider, powerW: solution.powerW },
   };
 
+  renderDerivedValues({ ...formState, powerW: solution.powerW });
+
   const { estimate, drafting } = estimateWithDrafting(syntheticInput);
   if (!estimate || !Number.isFinite(estimate.velocity) || estimate.velocity <= 0) {
     renderNoSolution();
